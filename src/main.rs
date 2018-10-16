@@ -1,6 +1,6 @@
+extern crate checksums;
 extern crate glob;
 extern crate rayon;
-extern crate sha2;
 extern crate subprocess;
 
 pub mod roomservice;
@@ -19,10 +19,11 @@ fn main() {
     // let res = x.wait().unwrap();
 
     // println!("{:?} {:?}", res, x);
-    let mut roomservice = RoomserviceBuilder::new("../unity/services/".to_string());
+    let mut roomservice = RoomserviceBuilder::new("./".to_string());
 
-    roomservice.add_room(RoomBuilder::new("./", None, "./**/*.ts"));
+    roomservice.add_room(RoomBuilder::new("./", None, "./**/*.rs"));
     // roomservice.add_room(Room::new("./", None, "./**/*"));
+    roomservice.exec();
+
     println!("{:?}", roomservice);
-    roomservice.exec()
 }

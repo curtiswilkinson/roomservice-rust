@@ -1,8 +1,7 @@
-use glob::{glob_with, MatchOptions};
 use rayon::prelude::*;
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[derive(Debug)]
 pub struct RoomBuilder {
@@ -23,8 +22,10 @@ impl RoomBuilder {
             should_build: true,
         }
     }
-    pub fn should_build(&mut self) {
-        self.should_build = true;
+
+    fn generate_hash(&self) -> String {
+        use checksums::{hash_file, Algorithm::BLAKE2};
+        use glob::{glob_with, MatchOptions};
 
         let globpath =
             Path::new(&self.path).join(Path::new(&self.include).strip_prefix("./").unwrap());
@@ -32,48 +33,77 @@ impl RoomBuilder {
         let options: MatchOptions = Default::default();
         let source_files: Vec<_> = glob_with(&globpath.to_str().unwrap(), &options)
             .unwrap()
-            .filter_map(|x| x.ok())
+            .filter_map(|x| match x {
+                Ok(path) => {
+                    use std::fs::metadata;
+                    match metadata(&path) {
+                        Ok(meta) => {
+                            if meta.is_file() {
+                                Some(path)
+                            } else {
+                                None
+                            }
+                        }
+                        Err(_) => None,
+                    }
+                }
+                Err(_) => None,
+            })
             .collect();
 
-        let files: Vec<_> = source_files
+        // println!("{:?}", source_files);
+
+        let hashed_files: Vec<_> = source_files
             .par_iter()
-            .map(read_file)
-            .filter_map(|x| match x {
-                Some(x) => {
-                    use sha2::{Digest, Sha256};
-                    let mut hasher = Sha256::new();
-                    hasher.input(x);
-                    Some(hasher.result())
-                }
-                None => None,
-            }).collect();
+            .map(|path| hash_file(&path, BLAKE2))
+            .collect();
 
-        println!("The number if files is {:?}", files.len());
-
-        // hash(self, files)
+        hashed_files.join("\n")
     }
-}
 
-fn read_file(path: &PathBuf) -> Option<String> {
-    use std::fs::metadata;
-    match metadata(&path).unwrap().is_dir() {
-        true => None,
-        false => {
-            let mut f = File::open(&path).expect("file not found");
+    fn prev_hash(&self) -> Option<String> {
+        let file = File::open(".roomservice/name");
+        match file {
+            Ok(mut handle) => {
+                let mut contents = String::new();
+                handle
+                    .read_to_string(&mut contents)
+                    .expect("should never fail");
 
-            let mut contents = String::new();
-            f.read_to_string(&mut contents).expect("err reading file");
-
-            Some(contents)
+                Some(contents)
+            }
+            Err(_) => None,
         }
     }
-}
 
-fn hash(room: &mut RoomBuilder, files: Vec<String>) {
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.input(&room.name);
-    hasher.input(&room.path);
-    hasher.input(&files.join("\n"));
-    println!("{:?}", hasher.result());
+    pub fn write_hash(&self, hash: String) {
+        //TODO: write hash
+        println!("writing hash");
+        let mut file = File::create(".roomservice/name").unwrap();
+        match file.write_all(hash.as_bytes()) {
+            Ok(_) => (),
+            Err(e) => panic!("Unable to write roomservice cache for room {}", e),
+        }
+    }
+
+    pub fn should_build(&mut self) {
+        let prev = self.prev_hash();
+        let curr = self.generate_hash();
+        // println!("Current Hash is: {}, previous hash was: {:?}", curr, prev);
+
+        match prev {
+            Some(old_hash) => {
+                if old_hash == curr {
+                    self.should_build = false
+                } else {
+                    self.should_build = true;
+                }
+            }
+            None => self.should_build = true,
+        }
+
+        if self.should_build {
+            self.write_hash(curr)
+        }
+    }
 }

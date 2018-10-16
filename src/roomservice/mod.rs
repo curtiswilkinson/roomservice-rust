@@ -11,7 +11,14 @@ pub struct RoomserviceBuilder {
 
 impl RoomserviceBuilder {
     pub fn new(project: String) -> RoomserviceBuilder {
-        // TODO: Check the roomservice dir exists
+        match std::fs::create_dir(".roomservice") {
+            Ok(_) => (),
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::AlreadyExists => (),
+                _ => panic!("Unable to create `.roomservice` directory in project"),
+            },
+        };
+
         RoomserviceBuilder {
             project,
             rooms: Vec::new(),
@@ -27,7 +34,6 @@ impl RoomserviceBuilder {
             .unwrap()
             .to_string();
 
-        println!("Room Path: {:?}", room.path);
         self.rooms.push(room);
     }
 

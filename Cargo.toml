@@ -7,4 +7,4 @@ authors = ["curtiswilkinson <curtistatewilkinson@gmail.com>"]
 rayon = "1.0.0"
 glob = "0.2.11"
 subprocess = "0.1.16"
-sha2 = "0.8.0"
+checksums = "0.5"
