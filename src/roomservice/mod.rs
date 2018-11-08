@@ -1,3 +1,4 @@
+use colored::Colorize;
 use rayon::prelude::*;
 
 pub mod room;
@@ -38,10 +39,97 @@ impl RoomserviceBuilder {
     }
 
     pub fn exec(&mut self) {
+        println!("{}", "Diffing rooms".magenta().bold());
         self.rooms
             .par_iter_mut()
             .for_each(|room| room.should_build());
 
+        let diff_names: Vec<_> = self
+            .rooms
+            .iter()
+            .filter_map(|room| {
+                if room.should_build {
+                    Some(format!("{} {}", "==>".bold(), &room.name))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        println!("The following rooms have changed:");
+        println!("{}", diff_names.join("\n"));
+
+        println!("{}", "\nExecuting Before".magenta().bold());
+        self.rooms.par_iter().for_each(|room| {
+            exec_cmd(
+                &room.name,
+                &room.should_build,
+                &room.path,
+                &room.hooks.before,
+            )
+        });
+
+        println!("{}", "\nExecuting Run Parallel".magenta().bold());
+        self.rooms.par_iter().for_each(|room| {
+            exec_cmd(
+                &room.name,
+                &room.should_build,
+                &room.path,
+                &room.hooks.run_parallel,
+            )
+        });
+
+        println!("{}", "\nExecuting Run Synchronously".magenta().bold());
+        self.rooms.iter().for_each(|room| {
+            exec_cmd(
+                &room.name,
+                &room.should_build,
+                &room.path,
+                &room.hooks.run_synchronously,
+            )
+        });
+
+        println!("{}", "\nExecuting After".magenta().bold());
+        self.rooms.par_iter().for_each(|room| {
+            exec_cmd(
+                &room.name,
+                &room.should_build,
+                &room.path,
+                &room.hooks.after,
+            )
+        });
+
         // Check should builds
+    }
+}
+
+fn exec_cmd(name: &String, should_build: &bool, cwd: &String, cmd: &Option<String>) -> () {
+    use subprocess::{Exec, ExitStatus::Exited, Redirection};
+
+    if should_build.to_owned() {
+        match cmd {
+            Some(cmd) => {
+                println!("{} {} {}", "==>".bold(), "[Starting]".cyan(), name);
+                match Exec::shell(cmd)
+                    .cwd(cwd)
+                    .stdout(Redirection::Pipe)
+                    .popen()
+                    .unwrap()
+                    .wait()
+                {
+                    Ok(e) => match e {
+                        Exited(0) => {
+                            println!("{} {} {}", "==>".bold(), "[Completed]".green(), name)
+                        }
+                        e => {
+                            println!("{} {} {}", "==>".bold(), "[Error]".red(), name);
+                            println!("{:?}", e)
+                        }
+                    },
+                    _ => panic!("Unexpected stuff"),
+                }
+            }
+            None => (),
+        }
     }
 }

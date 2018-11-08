@@ -1,29 +1,44 @@
 extern crate checksums;
+extern crate colored;
 extern crate glob;
 extern crate rayon;
 extern crate subprocess;
 
 pub mod roomservice;
-use roomservice::room::RoomBuilder;
+use roomservice::room::{Hooks, RoomBuilder};
 use roomservice::RoomserviceBuilder;
 
 fn main() {
-    // use subprocess::Exec;
-    // use subprocess::Redirection;
-    // let mut x = Exec::shell("toh hey")
-    //     .cwd("./")
-    //     .stderr(Redirection::Pipe)
-    //     .popen()
-    //     .unwrap();
-
-    // let res = x.wait().unwrap();
-
-    // println!("{:?} {:?}", res, x);
     let mut roomservice = RoomserviceBuilder::new("./".to_string());
 
-    roomservice.add_room(RoomBuilder::new("./", None, "./**/*.rs"));
+    roomservice.add_room(RoomBuilder::new(
+        "room_one".to_string(),
+        "./".to_string(),
+        "./**/*.rs".to_string(),
+        Hooks {
+            before: Some("sleep 2".to_string()),
+            run_synchronously: Some("sleep 4".to_string()),
+            run_parallel: Some("sleep 1".to_string()),
+            after: Some("sleep 2".to_string()),
+            finally: None,
+        },
+    ));
+
+    roomservice.add_room(RoomBuilder::new(
+        "room_two".to_string(),
+        "./".to_string(),
+        "./**/*.rs".to_string(),
+        Hooks {
+            before: Some("eco HAHAHA".to_string()),
+            run_synchronously: Some("sleep 3".to_string()),
+            run_parallel: Some("sleep 2".to_string()),
+            after: Some("sleep 4".to_string()),
+            finally: None,
+        },
+    ));
+
     // roomservice.add_room(Room::new("./", None, "./**/*"));
     roomservice.exec();
 
-    println!("{:?}", roomservice);
+    // println!("{:?}", roomservice);
 }
