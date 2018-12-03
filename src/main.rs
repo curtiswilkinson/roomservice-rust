@@ -1,14 +1,21 @@
+#[macro_use]
+extern crate serde_derive;
 extern crate checksums;
 extern crate colored;
 extern crate glob;
 extern crate rayon;
+extern crate serde_yaml;
 extern crate subprocess;
 
 pub mod roomservice;
+use roomservice::config;
 use roomservice::room::{Hooks, RoomBuilder};
 use roomservice::RoomserviceBuilder;
 
 fn main() {
+    let config = config::read();
+    println!("{:?}", config);
+
     let mut roomservice = RoomserviceBuilder::new("./".to_string());
 
     roomservice.add_room(RoomBuilder::new(

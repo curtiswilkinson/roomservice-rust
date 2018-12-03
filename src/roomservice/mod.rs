@@ -1,6 +1,7 @@
 use colored::Colorize;
 use rayon::prelude::*;
 
+pub mod config;
 pub mod room;
 use std::path::Path;
 
@@ -53,8 +54,7 @@ impl RoomserviceBuilder {
                 } else {
                     None
                 }
-            })
-            .collect();
+            }).collect();
 
         println!("The following rooms have changed:");
         println!("{}", diff_names.join("\n"));
