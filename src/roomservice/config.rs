@@ -25,10 +25,10 @@ fn default_include() -> String {
     "./**/*.*".to_string()
 }
 
-pub fn read() -> Config {
+pub fn read(path_to_project: &str) -> Config {
     let mut config_contents = String::new();
-    let mut file =
-        File::open("../unity/roomservice.config.yml").expect("Unable to open config file");
+    let mut file = File::open([path_to_project, "roomservice.config.yml"].join("/"))
+        .expect("Unable to open config file");
     file.read_to_string(&mut config_contents)
         .expect("Error reading the config file");
 

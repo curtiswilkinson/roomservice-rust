@@ -22,8 +22,7 @@ fn main() {
                 .short("p")
                 .long("project")
                 .takes_value(true),
-        )
-        .subcommand(SubCommand::with_name("cache"))
+        ).subcommand(SubCommand::with_name("cache"))
         .get_matches();
 
     let project = matches.value_of("project").unwrap_or("./");
@@ -32,7 +31,7 @@ fn main() {
 
     let mut roomservice = RoomserviceBuilder::new(project.to_string());
 
-    let cfg = config::read();
+    let cfg = config::read(project);
     // println!("{:?}", cfg);
 
     for (name, room_config) in cfg.rooms {
