@@ -12,6 +12,7 @@ pub struct RoomserviceBuilder {
 }
 
 impl RoomserviceBuilder {
+    // @CleanUp, this can be &str
     pub fn new(project: String) -> RoomserviceBuilder {
         match std::fs::create_dir(".roomservice") {
             Ok(_) => (),
@@ -54,7 +55,8 @@ impl RoomserviceBuilder {
                 } else {
                     None
                 }
-            }).collect();
+            })
+            .collect();
 
         println!("The following rooms have changed:");
         println!("{}", diff_names.join("\n"));

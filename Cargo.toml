@@ -4,11 +4,12 @@ version = "0.1.0"
 authors = ["curtiswilkinson <curtistatewilkinson@gmail.com>"]
 
 [dependencies]
-rayon = "1.0.0"
-glob = "0.2.11"
-subprocess = "0.1.17"
 checksums = "0.5"
+clap = "2.32.0"
 colored = "1.6.1"
-serde_yaml = "0.8.7"
-serde_derive = "1.0.80"
+glob = "0.2.11"
+rayon = "1.0.0"
 serde = "1.0.80"
+serde_derive = "1.0.80"
+serde_yaml = "0.8.7"
+subprocess = "0.1.17"
