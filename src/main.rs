@@ -4,6 +4,7 @@ extern crate checksums;
 extern crate clap;
 extern crate colored;
 extern crate glob;
+extern crate globwalk;
 extern crate rayon;
 extern crate serde_yaml;
 extern crate subprocess;
@@ -50,7 +51,7 @@ fn main() {
     }
 
     // roomservice.add_room(Room::new("./", None, "./**/*"));
-    // roomservice.exec();
+    roomservice.exec();
     println!("{:?}", roomservice);
 
     // println!("{:?}", roomservice);

@@ -1,7 +1,5 @@
-use rayon::prelude::*;
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::Path;
 
 #[derive(Debug)]
 pub struct RoomBuilder {
@@ -34,38 +32,31 @@ impl RoomBuilder {
 
     fn generate_hash(&self) -> String {
         use checksums::{hash_file, Algorithm::BLAKE2};
-        use glob::{glob_with, MatchOptions};
 
-        let globpath =
-            Path::new(&self.path).join(Path::new(&self.include).strip_prefix("./").unwrap());
+        let walker = globwalk::GlobWalkerBuilder::from_patterns(
+            &self.path,
+            &["*", "!target", "!.git", "!.roomservice"],
+        ).follow_links(false)
+        .build()
+        .unwrap()
+        .into_iter()
+        .filter_map(|result| match result {
+            Ok(entry) => if entry.file_type().is_file() {
+                Some(entry)
+            } else {
+                None
+            },
+            Err(_) => None,
+        });
 
-        let options: MatchOptions = Default::default();
-        let source_files: Vec<_> = glob_with(&globpath.to_str().unwrap(), &options)
-            .unwrap()
-            .filter_map(|x| match x {
-                Ok(path) => {
-                    use std::fs::metadata;
-                    match metadata(&path) {
-                        Ok(meta) => {
-                            if meta.is_file() {
-                                Some(path)
-                            } else {
-                                None
-                            }
-                        }
-                        Err(_) => None,
-                    }
-                }
-                Err(_) => None,
-            })
-            .collect();
+        let mut hash = String::new();
 
-        let hashed_files: Vec<_> = source_files
-            .par_iter()
-            .map(|path| hash_file(&path, BLAKE2))
-            .collect();
+        for file in walker {
+            hash.push_str(&hash_file(file.path(), BLAKE2));
+            hash.push_str("\n");
+        }
 
-        hashed_files.join("\n")
+        return hash;
     }
 
     fn prev_hash(&self) -> Option<String> {
