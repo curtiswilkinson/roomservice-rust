@@ -58,6 +58,10 @@ impl RoomserviceBuilder {
             })
             .collect();
 
+        if diff_names.is_empty() {
+            println!("All rooms appear to be up to date!");
+            return;
+        }
         println!("The following rooms have changed:");
         println!("{}", diff_names.join("\n"));
 
@@ -65,7 +69,7 @@ impl RoomserviceBuilder {
         self.rooms.par_iter().for_each(|room| {
             exec_cmd(
                 &room.name,
-                &room.should_build,
+                room.should_build,
                 &room.path,
                 &room.hooks.before,
             )
@@ -75,7 +79,7 @@ impl RoomserviceBuilder {
         self.rooms.par_iter().for_each(|room| {
             exec_cmd(
                 &room.name,
-                &room.should_build,
+                room.should_build,
                 &room.path,
                 &room.hooks.run_parallel,
             )
@@ -85,7 +89,7 @@ impl RoomserviceBuilder {
         self.rooms.iter().for_each(|room| {
             exec_cmd(
                 &room.name,
-                &room.should_build,
+                room.should_build,
                 &room.path,
                 &room.hooks.run_synchronously,
             )
@@ -93,19 +97,18 @@ impl RoomserviceBuilder {
 
         println!("{}", "\nExecuting After".magenta().bold());
         self.rooms.par_iter().for_each(|room| {
-            exec_cmd(
-                &room.name,
-                &room.should_build,
-                &room.path,
-                &room.hooks.after,
-            )
+            exec_cmd(&room.name, room.should_build, &room.path, &room.hooks.after)
         });
 
-        // Check should builds
+        for room in &self.rooms {
+            if !room.errored {
+                room.write_hash();
+            }
+        }
     }
 }
 
-fn exec_cmd(name: &String, should_build: &bool, cwd: &String, cmd: &Option<String>) -> () {
+fn exec_cmd(name: &str, should_build: bool, cwd: &str, cmd: &Option<String>) {
     use subprocess::{Exec, ExitStatus::Exited, Redirection};
 
     if should_build.to_owned() {

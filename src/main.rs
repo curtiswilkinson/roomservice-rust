@@ -4,6 +4,7 @@ extern crate checksums;
 extern crate clap;
 extern crate colored;
 extern crate glob;
+extern crate globwalk;
 extern crate rayon;
 extern crate serde_yaml;
 extern crate subprocess;
@@ -22,7 +23,8 @@ fn main() {
                 .short("p")
                 .long("project")
                 .takes_value(true),
-        ).subcommand(SubCommand::with_name("cache"))
+        )
+        .subcommand(SubCommand::with_name("cache"))
         .get_matches();
 
     let project = matches.value_of("project").unwrap_or("./");
@@ -50,8 +52,8 @@ fn main() {
     }
 
     // roomservice.add_room(Room::new("./", None, "./**/*"));
-    // roomservice.exec();
-    println!("{:?}", roomservice);
+    roomservice.exec();
+    // println!("{:?}", roomservice);
 
     // println!("{:?}", roomservice);
 }

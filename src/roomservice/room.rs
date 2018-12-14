@@ -1,7 +1,5 @@
-use rayon::prelude::*;
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::Path;
 
 #[derive(Debug)]
 pub struct RoomBuilder {
@@ -10,6 +8,8 @@ pub struct RoomBuilder {
     pub include: String,
     pub hooks: Hooks,
     pub should_build: bool,
+    pub errored: bool,
+    pub latest_hash: Option<String>,
 }
 
 #[derive(Debug)]
@@ -29,48 +29,45 @@ impl RoomBuilder {
             include,
             hooks,
             should_build: true,
+            errored: false,
+            latest_hash: None,
         }
     }
 
     fn generate_hash(&self) -> String {
         use checksums::{hash_file, Algorithm::BLAKE2};
-        use glob::{glob_with, MatchOptions};
 
-        let globpath =
-            Path::new(&self.path).join(Path::new(&self.include).strip_prefix("./").unwrap());
-
-        let options: MatchOptions = Default::default();
-        let source_files: Vec<_> = glob_with(&globpath.to_str().unwrap(), &options)
-            .unwrap()
-            .filter_map(|x| match x {
-                Ok(path) => {
-                    use std::fs::metadata;
-                    match metadata(&path) {
-                        Ok(meta) => {
-                            if meta.is_file() {
-                                Some(path)
-                            } else {
-                                None
-                            }
-                        }
-                        Err(_) => None,
-                    }
+        let walker = globwalk::GlobWalkerBuilder::from_patterns(
+            &self.path,
+            &["*", "!target", "!.git", "!.roomservice", "!node_modules"],
+        )
+        .follow_links(false)
+        .build()
+        .unwrap()
+        .filter_map(|result| match result {
+            Ok(entry) => {
+                if entry.file_type().is_file() {
+                    Some(entry)
+                } else {
+                    None
                 }
-                Err(_) => None,
-            })
-            .collect();
+            }
+            Err(_) => None,
+        });
 
-        let hashed_files: Vec<_> = source_files
-            .par_iter()
-            .map(|path| hash_file(&path, BLAKE2))
-            .collect();
+        let mut hash = String::new();
 
-        hashed_files.join("\n")
+        for file in walker {
+            hash.push_str(&hash_file(file.path(), BLAKE2));
+            hash.push_str("\n");
+        }
+
+        hash
     }
 
     fn prev_hash(&self) -> Option<String> {
         let mut path = String::new();
-        path.push_str("./roomservice/");
+        path.push_str("./.roomservice/");
         path.push_str(&self.name);
         let file = File::open(path);
         match file {
@@ -86,12 +83,13 @@ impl RoomBuilder {
         }
     }
 
-    pub fn write_hash(&self, hash: String) {
+    pub fn write_hash(&self) {
         let mut path = String::new();
+
         path.push_str("./.roomservice/");
         path.push_str(&self.name);
         let mut file = File::create(path).unwrap();
-        match file.write_all(hash.as_bytes()) {
+        match file.write_all(self.latest_hash.as_ref().unwrap().as_bytes()) {
             Ok(_) => (),
             Err(e) => panic!("Unable to write roomservice cache for room {}", e),
         }
@@ -113,8 +111,9 @@ impl RoomBuilder {
             None => self.should_build = true,
         }
 
-        if self.should_build {
-            self.write_hash(curr)
-        }
+        self.latest_hash = Some(curr);
+        // if self.should_build {
+        //     self.write_hash(curr)
+        // }
     }
 }
