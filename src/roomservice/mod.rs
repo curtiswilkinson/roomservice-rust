@@ -100,7 +100,11 @@ impl RoomserviceBuilder {
             exec_cmd(&room.name, room.should_build, &room.path, &room.hooks.after)
         });
 
-        // Check should builds
+        for room in &self.rooms {
+            if !room.errored {
+                room.write_hash();
+            }
+        }
     }
 }
 

@@ -8,6 +8,8 @@ pub struct RoomBuilder {
     pub include: String,
     pub hooks: Hooks,
     pub should_build: bool,
+    pub errored: bool,
+    pub latest_hash: Option<String>,
 }
 
 #[derive(Debug)]
@@ -27,6 +29,8 @@ impl RoomBuilder {
             include,
             hooks,
             should_build: true,
+            errored: false,
+            latest_hash: None,
         }
     }
 
@@ -79,12 +83,13 @@ impl RoomBuilder {
         }
     }
 
-    pub fn write_hash(&self, hash: String) {
+    pub fn write_hash(&self) {
         let mut path = String::new();
+
         path.push_str("./.roomservice/");
         path.push_str(&self.name);
         let mut file = File::create(path).unwrap();
-        match file.write_all(hash.as_bytes()) {
+        match file.write_all(self.latest_hash.as_ref().unwrap().as_bytes()) {
             Ok(_) => (),
             Err(e) => panic!("Unable to write roomservice cache for room {}", e),
         }
@@ -106,8 +111,9 @@ impl RoomBuilder {
             None => self.should_build = true,
         }
 
-        if self.should_build {
-            self.write_hash(curr)
-        }
+        self.latest_hash = Some(curr);
+        // if self.should_build {
+        //     self.write_hash(curr)
+        // }
     }
 }
