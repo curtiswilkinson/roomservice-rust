@@ -3,6 +3,7 @@ use rayon::prelude::*;
 
 pub mod config;
 pub mod room;
+use roomservice::room::RoomBuilder;
 use std::path::Path;
 
 #[derive(Debug)]
@@ -12,7 +13,6 @@ pub struct RoomserviceBuilder {
 }
 
 impl RoomserviceBuilder {
-    // @CleanUp, this can be &str
     pub fn new(project: String) -> RoomserviceBuilder {
         match std::fs::create_dir(".roomservice") {
             Ok(_) => (),
@@ -46,16 +46,38 @@ impl RoomserviceBuilder {
             .par_iter_mut()
             .for_each(|room| room.should_build());
 
+        let mut is_before = false;
+        let mut is_run_para = false;
+        let mut is_run_sync = false;
+        let mut is_after = false;
+
         let diff_names: Vec<_> = self
             .rooms
             .iter()
             .filter_map(|room| {
+                if room.hooks.before.is_some() {
+                    is_before = true;
+                }
+
+                if room.hooks.run_parallel.is_some() {
+                    is_run_para = true;
+                }
+
+                if room.hooks.run_synchronously.is_some() {
+                    is_run_sync = true;
+                }
+
+                if room.hooks.after.is_some() {
+                    is_after = true;
+                }
+
                 if room.should_build {
                     Some(format!("{} {}", "==>".bold(), &room.name))
                 } else {
                     None
                 }
-            }).collect();
+            })
+            .collect();
 
         if diff_names.is_empty() {
             println!("All rooms appear to be up to date!");
@@ -64,56 +86,49 @@ impl RoomserviceBuilder {
         println!("The following rooms have changed:");
         println!("{}", diff_names.join("\n"));
 
-        println!("{}", "\nExecuting Before".magenta().bold());
-        self.rooms.par_iter().for_each(|room| {
-            exec_cmd(
-                &room.name,
-                room.should_build,
-                &room.path,
-                &room.hooks.before,
-            )
-        });
+        if is_before {
+            println!("{}", "\nExecuting Before".magenta().bold());
+            self.rooms
+                .par_iter()
+                .for_each(|room| exec_cmd(&room, &room.path, &room.hooks.before));
+        }
 
-        println!("{}", "\nExecuting Run Parallel".magenta().bold());
-        self.rooms.par_iter().for_each(|room| {
-            exec_cmd(
-                &room.name,
-                room.should_build,
-                &room.path,
-                &room.hooks.run_parallel,
-            )
-        });
+        if is_run_para {
+            println!("{}", "\nExecuting Run Parallel".magenta().bold());
+            self.rooms
+                .par_iter()
+                .for_each(|room| exec_cmd(&room, &room.path, &room.hooks.run_parallel));
+        }
 
-        println!("{}", "\nExecuting Run Synchronously".magenta().bold());
-        self.rooms.iter().for_each(|room| {
-            exec_cmd(
-                &room.name,
-                room.should_build,
-                &room.path,
-                &room.hooks.run_synchronously,
-            )
-        });
+        if is_run_sync {
+            println!("{}", "\nExecuting Run Synchronously".magenta().bold());
+            self.rooms
+                .iter()
+                .for_each(|room| exec_cmd(&room, &room.path, &room.hooks.run_synchronously));
+        }
 
-        println!("{}", "\nExecuting After".magenta().bold());
-        self.rooms.par_iter().for_each(|room| {
-            exec_cmd(&room.name, room.should_build, &room.path, &room.hooks.after)
-        });
+        if is_after {
+            println!("{}", "\nExecuting After".magenta().bold());
+            self.rooms
+                .par_iter()
+                .for_each(|room| exec_cmd(&room, &room.path, &room.hooks.after));
 
-        for room in &self.rooms {
-            if !room.errored {
-                room.write_hash();
+            for room in &self.rooms {
+                if !room.errored {
+                    room.write_hash();
+                }
             }
         }
     }
 }
 
-fn exec_cmd(name: &str, should_build: bool, cwd: &str, cmd: &Option<String>) {
+fn exec_cmd(room: &RoomBuilder, cwd: &str, cmd: &Option<String>) {
     use subprocess::{Exec, ExitStatus::Exited, Redirection};
 
-    if should_build.to_owned() {
+    if room.should_build.to_owned() {
         match cmd {
             Some(cmd) => {
-                println!("{} {} {}", "==>".bold(), "[Starting]".cyan(), name);
+                println!("{} {} {}", "==>".bold(), "[Starting]".cyan(), room.name);
                 match Exec::shell(cmd)
                     .cwd(cwd)
                     .stdout(Redirection::Pipe)
@@ -122,13 +137,11 @@ fn exec_cmd(name: &str, should_build: bool, cwd: &str, cmd: &Option<String>) {
                 {
                     Ok(capture_data) => match capture_data.exit_status {
                         Exited(0) => {
-                            println!("Stdout: {}", capture_data.stdout_str());
-                            println!("Stderr: {}", capture_data.stderr_str());
-                            println!("{} {} {}", "==>".bold(), "[Completed]".green(), name)
+                            println!("{} {} {}", "==>".bold(), "[Completed]".green(), room.name)
                         }
-                        e => {
-                            println!("{} {} {}", "==>".bold(), "[Error]".red(), name);
-                            println!("{:?}", e)
+                        _ => {
+                            println!("{} {} {}", "==>".bold(), "[Error]".red(), room.name);
+                            println!("{:?}", capture_data.stderr_str());
                         }
                     },
                     _ => panic!("Unexpected stuff"),

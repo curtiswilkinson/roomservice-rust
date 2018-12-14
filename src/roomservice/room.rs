@@ -112,8 +112,5 @@ impl RoomBuilder {
         }
 
         self.latest_hash = Some(curr);
-        // if self.should_build {
-        //     self.write_hash(curr)
-        // }
     }
 }
