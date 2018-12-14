@@ -35,17 +35,19 @@ impl RoomBuilder {
 
         let walker = globwalk::GlobWalkerBuilder::from_patterns(
             &self.path,
-            &["*", "!target", "!.git", "!.roomservice"],
-        ).follow_links(false)
+            &["*", "!target", "!.git", "!.roomservice", "!node_modules"],
+        )
+        .follow_links(false)
         .build()
         .unwrap()
-        .into_iter()
         .filter_map(|result| match result {
-            Ok(entry) => if entry.file_type().is_file() {
-                Some(entry)
-            } else {
-                None
-            },
+            Ok(entry) => {
+                if entry.file_type().is_file() {
+                    Some(entry)
+                } else {
+                    None
+                }
+            }
             Err(_) => None,
         });
 
@@ -56,12 +58,12 @@ impl RoomBuilder {
             hash.push_str("\n");
         }
 
-        return hash;
+        hash
     }
 
     fn prev_hash(&self) -> Option<String> {
         let mut path = String::new();
-        path.push_str("./roomservice/");
+        path.push_str("./.roomservice/");
         path.push_str(&self.name);
         let file = File::open(path);
         match file {

@@ -23,7 +23,8 @@ fn main() {
                 .short("p")
                 .long("project")
                 .takes_value(true),
-        ).subcommand(SubCommand::with_name("cache"))
+        )
+        .subcommand(SubCommand::with_name("cache"))
         .get_matches();
 
     let project = matches.value_of("project").unwrap_or("./");
@@ -52,7 +53,7 @@ fn main() {
 
     // roomservice.add_room(Room::new("./", None, "./**/*"));
     roomservice.exec();
-    println!("{:?}", roomservice);
+    // println!("{:?}", roomservice);
 
     // println!("{:?}", roomservice);
 }
