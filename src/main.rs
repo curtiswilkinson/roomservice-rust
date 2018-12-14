@@ -31,7 +31,7 @@ fn main() {
         .get_matches();
 
     let project = matches.value_of("project").unwrap_or("./");
-    let no_after = matches.value_of("no-after");
+    let no_after = matches.is_present("no-after");
 
     println!("After {:?}", no_after);
 
@@ -51,7 +51,7 @@ fn main() {
                 before: room_config.before,
                 run_synchronously: room_config.run_synchronous,
                 run_parallel: room_config.run_parallel,
-                after: room_config.after,
+                after: if no_after { None } else { room_config.after },
                 finally: room_config.finally,
             },
         ))
