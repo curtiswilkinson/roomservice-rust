@@ -55,8 +55,7 @@ impl RoomserviceBuilder {
                 } else {
                     None
                 }
-            })
-            .collect();
+            }).collect();
 
         if diff_names.is_empty() {
             println!("All rooms appear to be up to date!");
@@ -118,12 +117,13 @@ fn exec_cmd(name: &str, should_build: bool, cwd: &str, cmd: &Option<String>) {
                 match Exec::shell(cmd)
                     .cwd(cwd)
                     .stdout(Redirection::Pipe)
-                    .popen()
-                    .unwrap()
-                    .wait()
+                    .stderr(Redirection::Pipe)
+                    .capture()
                 {
-                    Ok(e) => match e {
+                    Ok(capture_data) => match capture_data.exit_status {
                         Exited(0) => {
+                            println!("Stdout: {}", capture_data.stdout_str());
+                            println!("Stderr: {}", capture_data.stderr_str());
                             println!("{} {} {}", "==>".bold(), "[Completed]".green(), name)
                         }
                         e => {
