@@ -1,0 +1,8 @@
+rooms:
+  room_one:
+    path: ./src/
+    before: doker service update --force unity_x
+    after: echo "hi"
+  room_two:
+    path: ./src/
+    before: echo hi
