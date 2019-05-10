@@ -10,6 +10,7 @@ pub struct RoomBuilder {
     pub hooks: Hooks,
     pub should_build: bool,
     pub latest_hash: Option<String>,
+    pub errored: bool,
 }
 
 #[derive(Debug)]
@@ -35,6 +36,7 @@ impl RoomBuilder {
             cache_dir,
             include,
             hooks,
+            errored: false,
             should_build: true,
             latest_hash: None,
         }
@@ -88,6 +90,10 @@ impl RoomBuilder {
             }
             Err(_) => None,
         }
+    }
+
+    pub fn set_errored(&mut self) {
+        self.errored = true
     }
 
     pub fn write_hash(&self) {

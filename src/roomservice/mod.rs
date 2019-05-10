@@ -98,52 +98,66 @@ impl RoomserviceBuilder {
             }
             println!("The following rooms have changed:");
             println!("{}", diff_names.join("\n"));
-
             if is_before {
                 println!("{}", "\nExecuting Before".magenta().bold());
-                self.rooms
-                    .par_iter()
-                    .for_each(|room| exec_cmd(room, &room.hooks.before));
+                self.rooms.par_iter_mut().for_each(|room| {
+                    let hook = room.hooks.before.clone();
+                    exec_cmd(room, hook);
+                });
             }
 
             if is_run_para {
                 println!("{}", "\nExecuting Run Parallel".magenta().bold());
-                self.rooms
-                    .par_iter()
-                    .for_each(|room| exec_cmd(room, &room.hooks.run_parallel));
+                self.rooms.par_iter_mut().for_each(|room| {
+                    let hook = room.hooks.run_parallel.clone();
+
+                    exec_cmd(room, hook);
+                });
             }
 
             if is_run_sync {
                 println!("{}", "\nExecuting Run Synchronously".magenta().bold());
-                self.rooms
-                    .iter()
-                    .for_each(|room| exec_cmd(room, &room.hooks.run_synchronously));
-            }
+                self.rooms.iter_mut().for_each(|room| {
+                    let hook = room.hooks.run_synchronously.clone();
 
+                    exec_cmd(room, hook);
+                });
+            }
             if is_after {
                 println!("{}", "\nExecuting After".magenta().bold());
-                self.rooms
-                    .par_iter()
-                    .for_each(|room| exec_cmd(room, &room.hooks.after));
+                self.rooms.par_iter_mut().for_each(|room| {
+                    let hook = room.hooks.after.clone();
+                    exec_cmd(room, hook);
+                });
             }
         }
 
+        let mut was_error = false;
         for room in &self.rooms {
-            room.write_hash();
+            if !room.errored {
+                room.write_hash();
+            } else {
+                was_error = true
+            }
+        }
+
+        if was_error {
+            println!("\n{}", "Errors occured during roomservice".bold().red())
         }
     }
 }
 
-fn exec_cmd(room: &RoomBuilder, cmd: &Option<String>) {
+fn exec_cmd(room: &mut RoomBuilder, cmd: Option<String>) {
     use subprocess::{Exec, ExitStatus::Exited, Redirection};
 
     let should_build = room.should_build.to_owned();
+    let is_errored = room.errored;
     let cwd = room.path.to_owned();
-
-    if should_build {
+    let name = &room.name;
+    if should_build && !is_errored {
         match cmd {
             Some(cmd) => {
-                println!("{} {} {}", "==>".bold(), "[Starting]".cyan(), room.name);
+                println!("{} {} {}", "==>".bold(), "[Starting]".cyan(), name);
                 match Exec::shell(cmd)
                     .cwd(cwd)
                     .stdout(Redirection::Pipe)
@@ -152,10 +166,11 @@ fn exec_cmd(room: &RoomBuilder, cmd: &Option<String>) {
                 {
                     Ok(capture_data) => match capture_data.exit_status {
                         Exited(0) => {
-                            println!("{} {} {}", "==>".bold(), "[Completed]".green(), room.name)
+                            println!("{} {} {}", "==>".bold(), "[Completed]".green(), name)
                         }
                         _ => {
-                            println!("{} {} {}", "==>".bold(), "[Error]".red(), room.name);
+                            println!("{} {} {}", "==>".bold(), "[Error]".red(), name);
+                            room.set_errored();
                             println!("{}", capture_data.stderr_str());
                         }
                     },
