@@ -72,7 +72,30 @@ fn main() {
     let mut roomservice = RoomserviceBuilder::new(project.to_string(), cache_dir.clone(), force);
 
     let cfg = config::read(project);
-    // println!("{:?}", cfg);
+
+
+    // Check only and ignore values provided are valid
+    if only.len() > 0 {
+        for name in &only {
+            if !cfg.rooms.keys().any(|room_name| room_name == name) {
+                println!(
+                    "Warning: \"{}\" was provided to --only and does not exist in config",
+                    name
+                )
+            }
+        }
+    }
+
+    if ignore.len() > 0 {
+        for name in &ignore {
+            if !cfg.rooms.keys().any(|room_name| room_name == name) {
+                println!(
+                    "Warning: \"{}\" was provided to --ignore and does not exist in config",
+                    name
+                )
+            }
+        }
+    }
 
     for (name, room_config) in cfg.rooms {
         let mut should_add = true;
