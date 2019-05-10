@@ -5,10 +5,10 @@ use std::io::prelude::*;
 pub struct RoomBuilder {
     pub name: String,
     pub path: String,
+    pub cache_dir: String,
     pub include: String,
     pub hooks: Hooks,
     pub should_build: bool,
-    pub errored: bool,
     pub latest_hash: Option<String>,
 }
 
@@ -22,14 +22,20 @@ pub struct Hooks {
 }
 
 impl RoomBuilder {
-    pub fn new(name: String, path: String, include: String, hooks: Hooks) -> RoomBuilder {
+    pub fn new(
+        name: String,
+        path: String,
+        cache_dir: String,
+        include: String,
+        hooks: Hooks,
+    ) -> RoomBuilder {
         RoomBuilder {
             name,
             path,
+            cache_dir,
             include,
             hooks,
             should_build: true,
-            errored: false,
             latest_hash: None,
         }
     }
@@ -67,7 +73,8 @@ impl RoomBuilder {
 
     fn prev_hash(&self) -> Option<String> {
         let mut path = String::new();
-        path.push_str("./.roomservice/");
+        path.push_str(&self.cache_dir);
+        path.push_str("/");
         path.push_str(&self.name);
         let file = File::open(path);
         match file {
@@ -85,8 +92,8 @@ impl RoomBuilder {
 
     pub fn write_hash(&self) {
         let mut path = String::new();
-
-        path.push_str("./.roomservice/");
+        path.push_str(&self.cache_dir);
+        path.push_str("/");
         path.push_str(&self.name);
         let mut file = File::create(path).unwrap();
         match file.write_all(self.latest_hash.as_ref().unwrap().as_bytes()) {
@@ -95,20 +102,23 @@ impl RoomBuilder {
         }
     }
 
-    pub fn should_build(&mut self) {
+    pub fn should_build(&mut self, force: bool) {
         let prev = self.prev_hash();
         let curr = self.generate_hash();
         // println!("Current Hash is: {}, previous hash was: {:?}", curr, prev);
-
-        match prev {
-            Some(old_hash) => {
-                if old_hash == curr {
-                    self.should_build = false
-                } else {
-                    self.should_build = true;
+        if force {
+            self.should_build = true
+        } else {
+            match prev {
+                Some(old_hash) => {
+                    if old_hash == curr {
+                        self.should_build = false
+                    } else {
+                        self.should_build = true;
+                    }
                 }
+                None => self.should_build = true,
             }
-            None => self.should_build = true,
         }
 
         self.latest_hash = Some(curr);
