@@ -39,6 +39,7 @@ fn main() {
                 .takes_value(true)
                 .multiple(true),
         )
+        .arg(Arg::with_name("after").long("after"))
         .arg(Arg::with_name("update-hashes").long("update-hashes"))
         // Hooks
         .arg(Arg::with_name("no-after").long("no-after"))
@@ -47,6 +48,7 @@ fn main() {
     let project = matches.value_of("project").unwrap_or("./");
     let no_after = matches.is_present("no-after");
     let force = matches.is_present("force");
+    let after = matches.is_present("after");
 
     let only: Vec<_> = match matches.values_of("only") {
         Some(only_values) => only_values.collect(),
@@ -59,7 +61,11 @@ fn main() {
     };
 
     if only.len() > 0 && ignore.len() > 0 {
-        panic!("Some & None options provided, only one of these should be provided at a time")
+        panic!("--only & --ignore options provided, only one of these should be provided at a time")
+    }
+
+    if after && no_after {
+        panic!("Both --after & --no-after options provided.")
     }
 
     let path_buf = std::path::Path::new(&project)
@@ -125,11 +131,19 @@ fn main() {
                 cache_dir.clone(),
                 room_config.include,
                 Hooks {
-                    before: room_config.before,
-                    run_synchronously: room_config.run_synchronous,
-                    run_parallel: room_config.run_parallel,
+                    before: if after { None } else { room_config.before },
+                    run_synchronously: if after {
+                        None
+                    } else {
+                        room_config.run_synchronous
+                    },
+                    run_parallel: if after {
+                        None
+                    } else {
+                        room_config.run_parallel
+                    },
                     after: if no_after { None } else { room_config.after },
-                    finally: room_config.finally,
+                    finally: if after { None } else { room_config.finally },
                 },
             ))
         }
