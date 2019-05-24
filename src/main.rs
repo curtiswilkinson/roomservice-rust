@@ -15,6 +15,7 @@ pub mod roomservice;
 use roomservice::config;
 use roomservice::room::{Hooks, RoomBuilder};
 use roomservice::RoomserviceBuilder;
+use std::path::Path;
 
 fn main() {
     use std::time::Instant;
@@ -68,17 +69,17 @@ fn main() {
         panic!("Both --after & --no-after options provided.")
     }
 
-    let path_buf = std::path::Path::new(&project)
+    let project_path = find_config(project).expect("No config found.");
+    let path_buf = std::path::Path::new(&project_path)
         .canonicalize()
         .unwrap()
         .join(".roomservice");
 
     let cache_dir = path_buf.to_str().unwrap().to_owned().to_string();
 
-    let mut roomservice = RoomserviceBuilder::new(project.to_string(), cache_dir.clone(), force);
+    let mut roomservice = RoomserviceBuilder::new(project_path.clone(), cache_dir.clone(), force);
 
-    let cfg = config::read(project);
-
+    let cfg = config::read(&project_path);
 
     // Check only and ignore values provided are valid
     if only.len() > 0 {
@@ -153,4 +154,30 @@ fn main() {
     roomservice.exec(update_hashes_only);
 
     println!("\nTime taken: {}s", start_time.elapsed().as_secs())
+}
+
+fn find_config(base_path: &str) -> Option<String> {
+    let path = Path::new(base_path);
+    let maybe_config_path = Path::new(&path).join("roomservice.config.yml");
+
+    if maybe_config_path.exists() {
+        return Some(path.to_str().unwrap().to_string());
+    } else {
+        match maybe_config_path.parent() {
+            Some(parent) => {
+                if Path::new(parent).exists() {
+                    let relative_path = if &base_path[..2] == "./" {
+                        Path::new("../").join(&base_path[2..])
+                    } else {
+                        Path::new("../").join(base_path)
+                    };
+
+                    find_config(relative_path.to_str().unwrap())
+                } else {
+                    None
+                }
+            }
+            None => None,
+        }
+    }
 }

@@ -16,8 +16,6 @@ pub struct RoomserviceBuilder {
 
 impl RoomserviceBuilder {
     pub fn new(project: String, cache_dir: String, force: bool) -> RoomserviceBuilder {
-        println!("Project {}", project);
-
         match std::fs::create_dir(&cache_dir) {
             Ok(_) => (),
             Err(e) => match e.kind() {
