@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::prelude::*;
 use util::fail;
+use ignore::Walk;
 
 #[derive(Debug)]
 pub struct RoomBuilder {
@@ -46,35 +47,29 @@ impl RoomBuilder {
     fn generate_hash(&self, dump_scope: bool) -> String {
         use checksums::{hash_file, Algorithm::BLAKE2};
 
-        let walker = globwalk::GlobWalkerBuilder::from_patterns(
-            &self.path,
-            &["*", "!target", "!.git", "!.roomservice", "!node_modules"],
-        )
-        .follow_links(false)
-        .build()
-        .unwrap()
-        .filter_map(|result| match result {
-            Ok(entry) => {
-                if entry.file_type().is_file() {
-                    Some(entry)
-                } else {
-                    None
-                }
-            }
-            Err(_) => None,
-        });
-
         let mut hash = String::new();
         let mut scope = String::new();
 
-        for file in walker {
-            if dump_scope {
-                scope.push_str(file.path().to_str().unwrap());
-                scope.push_str("\n")
-            }
+        for maybe_file in Walk::new(&self.path) {
+            match maybe_file {
+                Ok(file) => {
+                    match file.file_type() {
+                        Some(entry) => {
+                            if entry.is_file() {
+                                if dump_scope {
+                                    scope.push_str(file.path().to_str().unwrap());
+                                    scope.push_str("\n")
+                                }
 
-            hash.push_str(&hash_file(file.path(), BLAKE2));
-            hash.push_str("\n");
+                                hash.push_str(&hash_file(file.path(), BLAKE2));
+                                hash.push_str("\n");
+                            }
+                        },
+                        None => (),
+                    }
+                },
+                Err(_) => unimplemented!(),
+            }
         }
         if dump_scope {
             std::fs::write(&self.name, scope).expect("unable to dump file-scope");

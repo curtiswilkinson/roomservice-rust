@@ -8,6 +8,7 @@ extern crate globwalk;
 extern crate rayon;
 extern crate serde_yaml;
 extern crate subprocess;
+extern crate ignore;
 
 use clap::{App, Arg};
 
