@@ -5,6 +5,7 @@ pub mod config;
 pub mod room;
 use roomservice::room::RoomBuilder;
 use std::path::Path;
+use util::fail;
 
 #[derive(Debug)]
 pub struct RoomserviceBuilder {
@@ -20,7 +21,7 @@ impl RoomserviceBuilder {
             Ok(_) => (),
             Err(e) => match e.kind() {
                 std::io::ErrorKind::AlreadyExists => (),
-                _ => panic!("Unable to create `.roomservice` directory in project"),
+                _ => fail("Unable to create `.roomservice` directory in project"),
             },
         };
 
@@ -44,7 +45,7 @@ impl RoomserviceBuilder {
         self.rooms.push(room);
     }
 
-    pub fn exec(&mut self, update_hashes_only: bool) {
+    pub fn exec(&mut self, update_hashes_only: bool, dry: bool, dump_scope: bool) {
         if !update_hashes_only {
             println!("{}", "Diffing rooms".magenta().bold());
         } else {
@@ -54,7 +55,7 @@ impl RoomserviceBuilder {
         let force = self.force;
         self.rooms
             .par_iter_mut()
-            .for_each(|room| room.should_build(force));
+            .for_each(|room| room.should_build(force, dump_scope));
 
         if !update_hashes_only {
             let mut is_before = false;
@@ -96,6 +97,10 @@ impl RoomserviceBuilder {
             }
             println!("The following rooms have changed:");
             println!("{}", diff_names.join("\n"));
+            if dry {
+                return;
+            }
+
             if is_before {
                 println!("{}", "\nExecuting Before".magenta().bold());
                 self.rooms.par_iter_mut().for_each(|room| {
@@ -172,7 +177,7 @@ fn exec_cmd(room: &mut RoomBuilder, cmd: Option<String>) {
                             println!("{}", capture_data.stderr_str());
                         }
                     },
-                    _ => panic!("Unexpected error in exec_cmd"),
+                    _ => fail("Unexpected error in exec_cmd"),
                 }
             }
             None => (),

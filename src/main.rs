@@ -12,10 +12,14 @@ extern crate subprocess;
 use clap::{App, Arg};
 
 pub mod roomservice;
+pub mod util;
+
 use roomservice::config;
 use roomservice::room::{Hooks, RoomBuilder};
 use roomservice::RoomserviceBuilder;
+
 use std::path::Path;
+use util::{fail, unwrap_fail};
 
 fn main() {
     use std::time::Instant;
@@ -41,6 +45,8 @@ fn main() {
                 .multiple(true),
         )
         .arg(Arg::with_name("after").long("after"))
+        .arg(Arg::with_name("dry").long("dry").short("d"))
+        .arg(Arg::with_name("dump-scope").long("dump-scope"))
         .arg(Arg::with_name("update-hashes").long("update-hashes"))
         // Hooks
         .arg(Arg::with_name("no-after").long("no-after"))
@@ -62,14 +68,14 @@ fn main() {
     };
 
     if only.len() > 0 && ignore.len() > 0 {
-        panic!("--only & --ignore options provided, only one of these should be provided at a time")
+        fail("--only & --ignore options provided, only one of these should be provided at a time")
     }
 
     if after && no_after {
-        panic!("Both --after & --no-after options provided.")
+        fail("Both --after & --no-after options provided.")
     }
 
-    let project_path = find_config(project).expect("No config found.");
+    let project_path = unwrap_fail(find_config(project), "No config found.");
     let path_buf = std::path::Path::new(&project_path)
         .canonicalize()
         .unwrap()
@@ -151,7 +157,10 @@ fn main() {
     }
 
     let update_hashes_only = matches.is_present("update-hashes");
-    roomservice.exec(update_hashes_only);
+    let dry = matches.is_present("dry");
+    let dump_scope= matches.is_present("dump-scope");
+
+    roomservice.exec(update_hashes_only, dry, dump_scope);
 
     println!("\nTime taken: {}s", start_time.elapsed().as_secs())
 }

@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::prelude::*;
+use util::fail;
 
 #[derive(Debug)]
 pub struct RoomBuilder {
@@ -42,7 +43,7 @@ impl RoomBuilder {
         }
     }
 
-    fn generate_hash(&self) -> String {
+    fn generate_hash(&self, dump_scope: bool) -> String {
         use checksums::{hash_file, Algorithm::BLAKE2};
 
         let walker = globwalk::GlobWalkerBuilder::from_patterns(
@@ -64,10 +65,19 @@ impl RoomBuilder {
         });
 
         let mut hash = String::new();
+        let mut scope = String::new();
 
         for file in walker {
+            if dump_scope {
+                scope.push_str(file.path().to_str().unwrap());
+                scope.push_str("\n")
+            }
+
             hash.push_str(&hash_file(file.path(), BLAKE2));
             hash.push_str("\n");
+        }
+        if dump_scope {
+            std::fs::write(&self.name, scope).expect("unable to dump file-scope");
         }
 
         hash
@@ -78,8 +88,8 @@ impl RoomBuilder {
         path.push_str(&self.cache_dir);
         path.push_str("/");
         path.push_str(&self.name);
-        let file = File::open(path);
-        match file {
+
+        match File::open(path) {
             Ok(mut handle) => {
                 let mut contents = String::new();
                 handle
@@ -104,13 +114,13 @@ impl RoomBuilder {
         let mut file = File::create(path).unwrap();
         match file.write_all(self.latest_hash.as_ref().unwrap().as_bytes()) {
             Ok(_) => (),
-            Err(e) => panic!("Unable to write roomservice cache for room {}", e),
+            Err(_) => fail("Unable to write roomservice cache for room {}"),
         }
     }
 
-    pub fn should_build(&mut self, force: bool) {
+    pub fn should_build(&mut self, force: bool, dump_scope: bool) {
         let prev = self.prev_hash();
-        let curr = self.generate_hash();
+        let curr = self.generate_hash(dump_scope);
         // println!("Current Hash is: {}, previous hash was: {:?}", curr, prev);
         if force {
             self.should_build = true
