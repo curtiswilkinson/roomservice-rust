@@ -71,6 +71,7 @@ impl RoomBuilder {
                 Err(_) => unimplemented!(),
             }
         }
+
         if dump_scope {
             std::fs::write(&self.name, scope).expect("unable to dump file-scope");
         }

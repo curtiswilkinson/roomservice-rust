@@ -92,9 +92,12 @@ fn main() {
     if only.len() > 0 {
         for name in &only {
             if !cfg.rooms.keys().any(|room_name| room_name == name) {
-                println!(
-                    "Warning: \"{}\" was provided to --only and does not exist in config",
-                    name
+                fail(
+                    format!(
+                        "\"{}\" was provided to --only and does not exist in config",
+                        name
+                    )
+                    .as_str(),
                 )
             }
         }
@@ -103,9 +106,12 @@ fn main() {
     if ignore.len() > 0 {
         for name in &ignore {
             if !cfg.rooms.keys().any(|room_name| room_name == name) {
-                println!(
-                    "Warning: \"{}\" was provided to --ignore and does not exist in config",
-                    name
+                fail(
+                    format!(
+                        "\"{}\" was provided to --ignore and does not exist in config",
+                        name
+                    )
+                    .as_str(),
                 )
             }
         }
@@ -159,7 +165,7 @@ fn main() {
 
     let update_hashes_only = matches.is_present("update-hashes");
     let dry = matches.is_present("dry");
-    let dump_scope= matches.is_present("dump-scope");
+    let dump_scope = matches.is_present("dump-scope");
 
     roomservice.exec(update_hashes_only, dry, dump_scope);
 
