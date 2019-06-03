@@ -34,15 +34,21 @@ impl RoomserviceBuilder {
     }
 
     pub fn add_room(&mut self, mut room: room::RoomBuilder) {
-        room.path = Path::new(&self.project)
-            .join(room.path)
-            .canonicalize()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string();
+        let room_path = Path::new(&self.project)
+            .join(&room.path);
 
-        self.rooms.push(room);
+        if room_path.exists() {
+            room.path = room_path
+                .canonicalize()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string();
+
+            self.rooms.push(room);
+        } else {
+            fail(format!("Path does not exist for room \"{}\" at \"{}\"", room.name, room.path).as_ref())
+        }
     }
 
     pub fn exec(&mut self, update_hashes_only: bool, dry: bool, dump_scope: bool) {
