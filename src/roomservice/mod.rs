@@ -9,7 +9,9 @@ use util::fail;
 
 #[derive(Debug)]
 pub struct RoomserviceBuilder {
+    pub before_all: Option<String>,
     pub rooms: Vec<room::RoomBuilder>,
+    pub after_all: Option<String>,
     project: String,
     cache_dir: String,
     force: bool,
@@ -30,12 +32,21 @@ impl RoomserviceBuilder {
             force,
             cache_dir: cache_dir,
             rooms: Vec::new(),
+            before_all: None,
+            after_all: None,
         }
     }
 
+    pub fn add_before_all(&mut self, before_all: String) {
+        self.before_all = Some(before_all)
+    }
+
+    pub fn add_after_all(&mut self, after_all: String) {
+        self.after_all = Some(after_all)
+    }
+
     pub fn add_room(&mut self, mut room: room::RoomBuilder) {
-        let room_path = Path::new(&self.project)
-            .join(&room.path);
+        let room_path = Path::new(&self.project).join(&room.path);
 
         if room_path.exists() {
             room.path = room_path
@@ -47,7 +58,13 @@ impl RoomserviceBuilder {
 
             self.rooms.push(room);
         } else {
-            fail(format!("Path does not exist for room \"{}\" at \"{}\"", room.name, room.path).as_ref())
+            fail(
+                format!(
+                    "Path does not exist for room \"{}\" at \"{}\"",
+                    room.name, room.path
+                )
+                .as_ref(),
+            )
         }
     }
 
@@ -107,11 +124,23 @@ impl RoomserviceBuilder {
                 return;
             }
 
+            if self.before_all.is_some() {
+                println!("{}", "\nExecuting Before All".magenta().bold());
+                match exec_cmd(
+                    "./".to_string(),
+                    self.before_all.as_ref().unwrap().to_string(),
+                    &"Before All".to_string(),
+                ) {
+                    Ok(_) => (),
+                    Err(_) => fail("Error in Before All hook, aborting roomservice run"),
+                }
+            }
+
             if is_before {
                 println!("{}", "\nExecuting Before".magenta().bold());
                 self.rooms.par_iter_mut().for_each(|room| {
                     let hook = room.hooks.before.clone();
-                    exec_cmd(room, hook);
+                    exec_room_cmd(room, hook);
                 });
             }
 
@@ -120,7 +149,7 @@ impl RoomserviceBuilder {
                 self.rooms.par_iter_mut().for_each(|room| {
                     let hook = room.hooks.run_parallel.clone();
 
-                    exec_cmd(room, hook);
+                    exec_room_cmd(room, hook);
                 });
             }
 
@@ -129,15 +158,28 @@ impl RoomserviceBuilder {
                 self.rooms.iter_mut().for_each(|room| {
                     let hook = room.hooks.run_synchronously.clone();
 
-                    exec_cmd(room, hook);
+                    exec_room_cmd(room, hook);
                 });
             }
             if is_after {
                 println!("{}", "\nExecuting After".magenta().bold());
                 self.rooms.par_iter_mut().for_each(|room| {
                     let hook = room.hooks.after.clone();
-                    exec_cmd(room, hook);
+                    exec_room_cmd(room, hook);
                 });
+            }
+
+            if self.after_all.is_some() {
+                println!("{}", "\nExecuting After All".magenta().bold());
+
+                match exec_cmd(
+                    "./".to_string(),
+                    self.after_all.as_ref().unwrap().to_string(),
+                    &"After All".to_string(),
+                ) {
+                    Ok(_) => (),
+                    Err(_) => fail("Error in After All hook, aborting roomservice run"),
+                }
             }
         }
 
@@ -156,37 +198,42 @@ impl RoomserviceBuilder {
     }
 }
 
-fn exec_cmd(room: &mut RoomBuilder, cmd: Option<String>) {
-    use subprocess::{Exec, ExitStatus::Exited, Redirection};
-
+fn exec_room_cmd(room: &mut RoomBuilder, cmd: Option<String>) {
     let should_build = room.should_build.to_owned();
     let is_errored = room.errored;
     let cwd = room.path.to_owned();
     let name = &room.name;
     if should_build && !is_errored {
         match cmd {
-            Some(cmd) => {
-                println!("{} {} {}", "==>".bold(), "[Starting]".cyan(), name);
-                match Exec::shell(cmd)
-                    .cwd(cwd)
-                    .stdout(Redirection::Pipe)
-                    .stderr(Redirection::Pipe)
-                    .capture()
-                {
-                    Ok(capture_data) => match capture_data.exit_status {
-                        Exited(0) => {
-                            println!("{} {} {}", "==>".bold(), "[Completed]".green(), name)
-                        }
-                        _ => {
-                            println!("{} {} {}", "==>".bold(), "[Error]".red(), name);
-                            room.set_errored();
-                            println!("{}", capture_data.stderr_str());
-                        }
-                    },
-                    _ => fail("Unexpected error in exec_cmd"),
-                }
-            }
+            Some(cmd) => match exec_cmd(cwd, cmd, name) {
+                Ok(_) => (),
+                Err(_) => room.set_errored(),
+            },
             None => (),
         }
+    }
+}
+
+fn exec_cmd(cwd: String, cmd: String, name: &String) -> Result<(), ()> {
+    use subprocess::{Exec, ExitStatus::Exited, Redirection};
+    match Exec::shell(cmd)
+        .cwd(cwd)
+        .stdout(Redirection::Pipe)
+        .stderr(Redirection::Pipe)
+        .capture()
+    {
+        Ok(capture_data) => match capture_data.exit_status {
+            Exited(0) => {
+                println!("{} {} {}", "==>".bold(), "[Completed]".green(), name);
+                Ok(())
+            }
+            _ => {
+                println!("{} {} {}", "==>".bold(), "[Error]".red(), name);
+
+                println!("{}", capture_data.stderr_str());
+                Err(())
+            }
+        },
+        _ => Err(fail("Unexpected error in exec_cmd")),
     }
 }

@@ -1,3 +1,4 @@
+beforeAll: echo beforeAll
 rooms:
   room_one:
     path: ./src/
@@ -6,3 +7,4 @@ rooms:
   room_two:
     path: ./src/
     before: echo hi
+afterAll: echo afterAll

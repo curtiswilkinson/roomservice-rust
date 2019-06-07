@@ -5,10 +5,10 @@ extern crate clap;
 extern crate colored;
 extern crate glob;
 extern crate globwalk;
+extern crate ignore;
 extern crate rayon;
 extern crate serde_yaml;
 extern crate subprocess;
-extern crate ignore;
 
 use clap::{App, Arg};
 
@@ -87,6 +87,14 @@ fn main() {
     let mut roomservice = RoomserviceBuilder::new(project_path.clone(), cache_dir.clone(), force);
 
     let cfg = config::read(&project_path);
+
+    if cfg.before_all.is_some() {
+        roomservice.add_before_all(cfg.before_all.unwrap())
+    }
+
+    if cfg.after_all.is_some() {
+        roomservice.add_after_all(cfg.after_all.unwrap())
+    }
 
     // Check only and ignore values provided are valid
     if only.len() > 0 {

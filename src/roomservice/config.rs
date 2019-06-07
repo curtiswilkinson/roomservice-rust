@@ -4,7 +4,11 @@ use std::io::prelude::*;
 
 #[derive(Debug, PartialEq, Deserialize)]
 pub struct Config {
+    #[serde(rename = "beforeAll")]
+    pub before_all: Option<String>,
     pub rooms: BTreeMap<String, RoomConfig>,
+    #[serde(rename = "afterAll")]
+    pub after_all: Option<String>
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
