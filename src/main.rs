@@ -15,7 +15,9 @@ use clap::{App, Arg};
 pub mod roomservice;
 pub mod util;
 
-use roomservice::config;
+use std::collections::BTreeMap;
+
+use roomservice::config::{self, RoomConfig};
 use roomservice::room::{Hooks, RoomBuilder};
 use roomservice::RoomserviceBuilder;
 
@@ -96,34 +98,9 @@ fn main() {
         roomservice.add_after_all(cfg.after_all.unwrap())
     }
 
-    // Check only and ignore values provided are valid
-    if only.len() > 0 {
-        for name in &only {
-            if !cfg.rooms.keys().any(|room_name| room_name == name) {
-                fail(
-                    format!(
-                        "\"{}\" was provided to --only and does not exist in config",
-                        name
-                    )
-                    .as_str(),
-                )
-            }
-        }
-    }
+    check_room_provided_to_flag("only", &only, &cfg.rooms);
 
-    if ignore.len() > 0 {
-        for name in &ignore {
-            if !cfg.rooms.keys().any(|room_name| room_name == name) {
-                fail(
-                    format!(
-                        "\"{}\" was provided to --ignore and does not exist in config",
-                        name
-                    )
-                    .as_str(),
-                )
-            }
-        }
-    }
+    check_room_provided_to_flag("ignore", &ignore, &cfg.rooms);
 
     for (name, room_config) in cfg.rooms {
         let mut should_add = true;
@@ -202,6 +179,26 @@ fn find_config(base_path: &str) -> Option<String> {
                 }
             }
             None => None,
+        }
+    }
+}
+
+fn check_room_provided_to_flag(
+    flag: &str,
+    provided_to_flag: &Vec<&str>,
+    rooms: &BTreeMap<String, RoomConfig>,
+) {
+    if provided_to_flag.len() > 0 {
+        for name in provided_to_flag {
+            if !rooms.keys().any(|room_name| room_name == name) {
+                fail(
+                    format!(
+                        "\"{}\" was provided to --{} and does not exist in config",
+                        name, flag
+                    )
+                    .as_str(),
+                )
+            }
         }
     }
 }

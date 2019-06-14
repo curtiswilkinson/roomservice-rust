@@ -1,7 +1,8 @@
-use std::fs::File;
+use checksums::{hash_file, Algorithm::BLAKE2};
+use ignore::Walk;
+use std::fs::{self, File};
 use std::io::prelude::*;
 use util::fail;
-use ignore::Walk;
 
 #[derive(Debug)]
 pub struct RoomBuilder {
@@ -45,35 +46,29 @@ impl RoomBuilder {
     }
 
     fn generate_hash(&self, dump_scope: bool) -> String {
-        use checksums::{hash_file, Algorithm::BLAKE2};
-
-        let mut hash = String::new();
+        let mut hash = String::with_capacity(256);
         let mut scope = String::new();
 
         for maybe_file in Walk::new(&self.path) {
-            match maybe_file {
-                Ok(file) => {
-                    match file.file_type() {
-                        Some(entry) => {
-                            if entry.is_file() {
-                                if dump_scope {
-                                    scope.push_str(file.path().to_str().unwrap());
-                                    scope.push_str("\n")
-                                }
+            let file = maybe_file.unwrap();
+            match file.file_type() {
+                Some(entry) => {
+                    if entry.is_file() {
+                        if dump_scope {
+                            scope.push_str(file.path().to_str().unwrap());
+                            scope.push_str("\n")
+                        }
 
-                                hash.push_str(&hash_file(file.path(), BLAKE2));
-                                hash.push_str("\n");
-                            }
-                        },
-                        None => (),
+                        hash.push_str(&hash_file(file.path(), BLAKE2));
+                        hash.push_str("\n");
                     }
-                },
-                Err(_) => unimplemented!(),
+                }
+                None => (),
             }
         }
 
         if dump_scope {
-            std::fs::write(&self.name, scope).expect("unable to dump file-scope");
+            fs::write(&self.name, scope).expect("unable to dump file-scope");
         }
 
         hash
@@ -85,15 +80,8 @@ impl RoomBuilder {
         path.push_str("/");
         path.push_str(&self.name);
 
-        match File::open(path) {
-            Ok(mut handle) => {
-                let mut contents = String::new();
-                handle
-                    .read_to_string(&mut contents)
-                    .expect("should never fail");
-
-                Some(contents)
-            }
+        match fs::read_to_string(path) {
+            Ok(content) => Some(content),
             Err(_) => None,
         }
     }

@@ -30,7 +30,7 @@ impl RoomserviceBuilder {
         RoomserviceBuilder {
             project,
             force,
-            cache_dir: cache_dir,
+            cache_dir,
             rooms: Vec::new(),
             before_all: None,
             after_all: None,
