@@ -205,10 +205,13 @@ fn exec_room_cmd(room: &mut RoomBuilder, cmd: Option<String>) {
     let name = &room.name;
     if should_build && !is_errored {
         match cmd {
-            Some(cmd) => match exec_cmd(cwd, cmd, name) {
-                Ok(_) => (),
-                Err(_) => room.set_errored(),
-            },
+            Some(cmd) => {
+                println!("{} {} {}", "==>".bold(), "[Starting]".cyan(), name);
+                match exec_cmd(cwd, cmd, name) {
+                    Ok(_) => (),
+                    Err(_) => room.set_errored(),
+                }
+            }
             None => (),
         }
     }
