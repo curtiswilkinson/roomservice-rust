@@ -61,12 +61,18 @@ fn main() {
     let after = matches.is_present("after");
 
     let only: Vec<_> = match matches.values_of("only") {
-        Some(only_values) => only_values.collect(),
+        Some(only_values) => {
+            let values: Vec<_> = only_values.collect();
+            values[0].split(',').collect()
+        }
         None => vec![],
     };
 
     let ignore: Vec<_> = match matches.values_of("ignore") {
-        Some(ignore_values) => ignore_values.collect(),
+        Some(ignore_values) => {
+            let values: Vec<_> = ignore_values.collect();
+            values[0].split(',').collect()
+        }
         None => vec![],
     };
 
@@ -107,19 +113,19 @@ fn main() {
 
         // @Note Check to see if it's in the only array
         if only.len() > 0 {
-            for only_name in &only {
-                if only_name.to_string() != name {
-                    should_add = false
-                }
+            if only.contains(&name.as_str()) {
+                should_add = true
+            } else {
+                should_add = false
             }
         }
 
         // @Note Check to see if it's in the ignore array
         if ignore.len() > 0 {
-            for ignore_name in &ignore {
-                if ignore_name.to_string() == name {
-                    should_add = false
-                }
+            if ignore.contains(&name.as_str()) {
+                should_add = false
+            } else {
+                should_add = true
             }
         }
 
