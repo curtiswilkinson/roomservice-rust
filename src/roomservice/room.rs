@@ -2,7 +2,7 @@ use checksums::{hash_file, Algorithm::BLAKE2};
 use ignore::Walk;
 use std::fs::{self, File};
 use std::io::prelude::*;
-use util::fail;
+use crate::util::fail;
 
 #[derive(Debug)]
 pub struct RoomBuilder {

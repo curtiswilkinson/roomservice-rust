@@ -17,12 +17,12 @@ pub mod util;
 
 use std::collections::BTreeMap;
 
-use roomservice::config::{self, RoomConfig};
-use roomservice::room::{Hooks, RoomBuilder};
-use roomservice::RoomserviceBuilder;
+use crate::roomservice::config::{self, RoomConfig};
+use crate::roomservice::room::{Hooks, RoomBuilder};
+use crate::roomservice::RoomserviceBuilder;
 
 use std::path::Path;
-use util::{fail, unwrap_fail};
+use crate::util::{fail, unwrap_fail};
 
 fn main() {
     use std::time::Instant;

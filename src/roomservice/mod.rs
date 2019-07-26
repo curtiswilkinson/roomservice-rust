@@ -3,9 +3,9 @@ use rayon::prelude::*;
 
 pub mod config;
 pub mod room;
-use roomservice::room::RoomBuilder;
+use crate::roomservice::room::RoomBuilder;
 use std::path::Path;
-use util::fail;
+use crate::util::fail;
 
 #[derive(Debug)]
 pub struct RoomserviceBuilder {
