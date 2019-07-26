@@ -18,7 +18,7 @@ pub struct RoomserviceBuilder {
 }
 
 impl RoomserviceBuilder {
-    pub fn new(project: String, cache_dir: String, force: bool) -> RoomserviceBuilder {
+    pub fn new<'a>(project: String, cache_dir: String, force: bool) -> RoomserviceBuilder {
         match std::fs::create_dir(&cache_dir) {
             Ok(_) => (),
             Err(e) => match e.kind() {
@@ -37,12 +37,12 @@ impl RoomserviceBuilder {
         }
     }
 
-    pub fn add_before_all(&mut self, before_all: String) {
-        self.before_all = Some(before_all)
+    pub fn add_before_all(&mut self, before_all: &str) {
+        self.before_all = Some(before_all.to_string())
     }
 
-    pub fn add_after_all(&mut self, after_all: String) {
-        self.after_all = Some(after_all)
+    pub fn add_after_all(&mut self, after_all: &str) {
+        self.after_all = Some(after_all.to_string())
     }
 
     pub fn add_room(&mut self, mut room: room::RoomBuilder) {
@@ -58,13 +58,10 @@ impl RoomserviceBuilder {
 
             self.rooms.push(room);
         } else {
-            fail(
-                format!(
-                    "Path does not exist for room \"{}\" at \"{}\"",
-                    room.name, room.path
-                )
-                .as_ref(),
-            )
+            fail(format!(
+                "Path does not exist for room \"{}\" at \"{}\"",
+                room.name, room.path
+            ))
         }
     }
 
@@ -118,8 +115,10 @@ impl RoomserviceBuilder {
                 println!("All rooms appear to be up to date!");
                 return;
             }
+
             println!("The following rooms have changed:");
             println!("{}", diff_names.join("\n"));
+
             if dry {
                 return;
             }
@@ -127,8 +126,8 @@ impl RoomserviceBuilder {
             if self.before_all.is_some() {
                 println!("{}", "\nExecuting Before All".magenta().bold());
                 match exec_cmd(
-                    "./".to_string(),
-                    self.before_all.as_ref().unwrap().to_string(),
+                    "./",
+                    &self.before_all.as_ref().unwrap(),
                     &"Before All".to_string(),
                 ) {
                     Ok(_) => (),
@@ -173,8 +172,8 @@ impl RoomserviceBuilder {
                 println!("{}", "\nExecuting After All".magenta().bold());
 
                 match exec_cmd(
-                    "./".to_string(),
-                    self.after_all.as_ref().unwrap().to_string(),
+                    "./",
+                    &self.after_all.as_ref().unwrap(),
                     &"After All".to_string(),
                 ) {
                     Ok(_) => (),
@@ -207,7 +206,7 @@ fn exec_room_cmd(room: &mut RoomBuilder, cmd: Option<String>) {
         match cmd {
             Some(cmd) => {
                 println!("{} {} {}", "==>".bold(), "[Starting]".cyan(), name);
-                match exec_cmd(cwd, cmd, name) {
+                match exec_cmd(&cwd, &cmd, name) {
                     Ok(_) => (),
                     Err(_) => room.set_errored(),
                 }
@@ -217,7 +216,7 @@ fn exec_room_cmd(room: &mut RoomBuilder, cmd: Option<String>) {
     }
 }
 
-fn exec_cmd(cwd: String, cmd: String, name: &String) -> Result<(), ()> {
+fn exec_cmd(cwd: &str, cmd: &str, name: &str) -> Result<(), ()> {
     use subprocess::{Exec, ExitStatus::Exited, Redirection};
     match Exec::shell(cmd)
         .cwd(cwd)

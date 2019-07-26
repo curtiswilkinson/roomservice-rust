@@ -22,7 +22,7 @@ use roomservice::room::{Hooks, RoomBuilder};
 use roomservice::RoomserviceBuilder;
 
 use std::path::Path;
-use util::{fail, unwrap_fail};
+use util::{fail, Failable};
 
 fn main() {
     use std::time::Instant;
@@ -60,21 +60,8 @@ fn main() {
     let force = matches.is_present("force");
     let after = matches.is_present("after");
 
-    let only: Vec<_> = match matches.values_of("only") {
-        Some(only_values) => {
-            let values: Vec<_> = only_values.collect();
-            values[0].split(',').collect()
-        }
-        None => vec![],
-    };
-
-    let ignore: Vec<_> = match matches.values_of("ignore") {
-        Some(ignore_values) => {
-            let values: Vec<_> = ignore_values.collect();
-            values[0].split(',').collect()
-        }
-        None => vec![],
-    };
+    let only = split_matches(matches.values_of("only"));
+    let ignore = split_matches(matches.values_of("ignore"));
 
     if only.len() > 0 && ignore.len() > 0 {
         fail("--only & --ignore options provided, only one of these should be provided at a time")
@@ -84,7 +71,7 @@ fn main() {
         fail("Both --after & --no-after options provided.")
     }
 
-    let project_path = unwrap_fail(find_config(project), "No config found.");
+    let project_path = find_config(project).unwrap_fail("No config found.");
     let path_buf = std::path::Path::new(&project_path)
         .canonicalize()
         .unwrap()
@@ -97,11 +84,11 @@ fn main() {
     let cfg = config::read(&project_path);
 
     if cfg.before_all.is_some() {
-        roomservice.add_before_all(cfg.before_all.unwrap())
+        roomservice.add_before_all(&cfg.before_all.unwrap())
     }
 
     if cfg.after_all.is_some() {
-        roomservice.add_after_all(cfg.after_all.unwrap())
+        roomservice.add_after_all(&cfg.after_all.unwrap())
     }
 
     check_room_provided_to_flag("only", &only, &cfg.rooms);
@@ -170,21 +157,18 @@ fn find_config(base_path: &str) -> Option<String> {
     if maybe_config_path.exists() {
         return Some(path.to_str().unwrap().to_string());
     } else {
-        match maybe_config_path.parent() {
-            Some(parent) => {
-                if Path::new(parent).exists() {
-                    let relative_path = if &base_path[..2] == "./" {
-                        Path::new("../").join(&base_path[2..])
-                    } else {
-                        Path::new("../").join(base_path)
-                    };
+        let parent = maybe_config_path.parent()?;
 
-                    find_config(relative_path.to_str().unwrap())
-                } else {
-                    None
-                }
-            }
-            None => None,
+        if Path::new(parent).exists() {
+            let relative_path = if &base_path[..2] == "./" {
+                Path::new("../").join(&base_path[2..])
+            } else {
+                Path::new("../").join(base_path)
+            };
+
+            find_config(relative_path.to_str().unwrap())
+        } else {
+            None
         }
     }
 }
@@ -197,14 +181,23 @@ fn check_room_provided_to_flag(
     if provided_to_flag.len() > 0 {
         for name in provided_to_flag {
             if !rooms.keys().any(|room_name| room_name == name) {
-                fail(
-                    format!(
-                        "\"{}\" was provided to --{} and does not exist in config",
-                        name, flag
-                    )
-                    .as_str(),
-                )
+                fail(format!(
+                    "\"{}\" was provided to --{} and does not exist in config",
+                    name, flag
+                ))
             }
         }
+    }
+}
+
+fn split_matches<'a>(val: Option<clap::Values<'a>>) -> Vec<&'a str> {
+    match val {
+        Some(ignore_values) => {
+            let values: Vec<_> = ignore_values.collect();
+
+            values[0].split(',').collect()
+        }
+
+        None => vec![],
     }
 }
