@@ -1,12 +1,15 @@
+#![feature(async_await)]
+#![feature(async_closure)]
+
 #[macro_use]
 extern crate serde_derive;
 extern crate checksums;
 extern crate clap;
 extern crate colored;
+extern crate futures;
 extern crate glob;
 extern crate globwalk;
 extern crate ignore;
-extern crate rayon;
 extern crate serde_yaml;
 extern crate subprocess;
 
@@ -21,8 +24,10 @@ use crate::roomservice::config::{self, RoomConfig};
 use crate::roomservice::room::{Hooks, RoomBuilder};
 use crate::roomservice::RoomserviceBuilder;
 
-use std::path::Path;
 use crate::util::{fail, unwrap_fail};
+use std::path::Path;
+
+use futures::executor::ThreadPool;
 
 fn main() {
     use std::time::Instant;
@@ -158,7 +163,11 @@ fn main() {
     let dry = matches.is_present("dry");
     let dump_scope = matches.is_present("dump-scope");
 
-    roomservice.exec(update_hashes_only, dry, dump_scope);
+    let rs = roomservice.exec(update_hashes_only, dry, dump_scope);
+
+    ThreadPool::new()
+        .expect("Failed to create threadpool")
+        .run(rs);
 
     println!("\nTime taken: {}s", start_time.elapsed().as_secs())
 }

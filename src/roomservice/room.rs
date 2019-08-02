@@ -45,7 +45,7 @@ impl RoomBuilder {
         }
     }
 
-    fn generate_hash(&self, dump_scope: bool) -> String {
+    async fn generate_hash(&self, dump_scope: bool) -> String {
         let mut hash = String::with_capacity(256);
         let mut scope = String::new();
 
@@ -74,7 +74,7 @@ impl RoomBuilder {
         hash
     }
 
-    fn prev_hash(&self) -> Option<String> {
+    async fn prev_hash(&self) -> Option<String> {
         let mut path = String::new();
         path.push_str(&self.cache_dir);
         path.push_str("/");
@@ -102,9 +102,9 @@ impl RoomBuilder {
         }
     }
 
-    pub fn should_build(&mut self, force: bool, dump_scope: bool) {
-        let prev = self.prev_hash();
-        let curr = self.generate_hash(dump_scope);
+    pub async fn should_build(&mut self, force: bool, dump_scope: bool) {
+        let prev = self.prev_hash().await;
+        let curr = self.generate_hash(dump_scope).await;
         // println!("Current Hash is: {}, previous hash was: {:?}", curr, prev);
         if force {
             self.should_build = true

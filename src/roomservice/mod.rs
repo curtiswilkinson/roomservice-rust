@@ -1,11 +1,13 @@
 use colored::Colorize;
-use rayon::prelude::*;
+
+use crate::roomservice::room::RoomBuilder;
+use crate::util::fail;
+use futures::future::join_all;
+use std::path::Path;
 
 pub mod config;
 pub mod room;
-use crate::roomservice::room::RoomBuilder;
-use std::path::Path;
-use crate::util::fail;
+
 
 #[derive(Debug)]
 pub struct RoomserviceBuilder {
@@ -68,7 +70,7 @@ impl RoomserviceBuilder {
         }
     }
 
-    pub fn exec(&mut self, update_hashes_only: bool, dry: bool, dump_scope: bool) {
+    pub async fn exec(&mut self, update_hashes_only: bool, dry: bool, dump_scope: bool) {
         if !update_hashes_only {
             println!("{}", "Diffing rooms".magenta().bold());
         } else {
@@ -76,9 +78,10 @@ impl RoomserviceBuilder {
         }
 
         let force = self.force;
-        self.rooms
-            .par_iter_mut()
-            .for_each(|room| room.should_build(force, dump_scope));
+
+        let should_build_futures = self.rooms.iter_mut().map(|room| room.should_build(force, dump_scope));
+
+        join_all(should_build_futures).await;
 
         if !update_hashes_only {
             let mut is_before = false;
@@ -138,35 +141,46 @@ impl RoomserviceBuilder {
 
             if is_before {
                 println!("{}", "\nExecuting Before".magenta().bold());
-                self.rooms.par_iter_mut().for_each(|room| {
+                let hook_future: Vec<_> = self.rooms.iter_mut().map(|room| {
+                    println!("iter room");
                     let hook = room.hooks.before.clone();
-                    exec_room_cmd(room, hook);
-                });
+                    exec_room_cmd(room, hook)
+                }).collect();
+
+                println!("About to join_all");
+
+                join_all(hook_future).await;
             }
 
             if is_run_para {
                 println!("{}", "\nExecuting Run Parallel".magenta().bold());
-                self.rooms.par_iter_mut().for_each(|room| {
+
+               let hook_future =  self.rooms.iter_mut().map(|room| {
                     let hook = room.hooks.run_parallel.clone();
 
-                    exec_room_cmd(room, hook);
+                    exec_room_cmd(room, hook)
                 });
+
+               join_all(hook_future).await;
             }
 
             if is_run_sync {
                 println!("{}", "\nExecuting Run Synchronously".magenta().bold());
-                self.rooms.iter_mut().for_each(|room| {
+                for room in self.rooms.iter_mut() {
                     let hook = room.hooks.run_synchronously.clone();
 
-                    exec_room_cmd(room, hook);
-                });
+                    exec_room_cmd(room, hook).await;
+                };
             }
+
             if is_after {
                 println!("{}", "\nExecuting After".magenta().bold());
-                self.rooms.par_iter_mut().for_each(|room| {
+                let hook_future = self.rooms.iter_mut().map(|room| {
                     let hook = room.hooks.after.clone();
-                    exec_room_cmd(room, hook);
+                    exec_room_cmd(room, hook)
                 });
+
+                join_all(hook_future).await;
             }
 
             if self.after_all.is_some() {
@@ -198,7 +212,7 @@ impl RoomserviceBuilder {
     }
 }
 
-fn exec_room_cmd(room: &mut RoomBuilder, cmd: Option<String>) {
+async fn exec_room_cmd(room: &mut RoomBuilder, cmd: Option<String>) {
     let should_build = room.should_build.to_owned();
     let is_errored = room.errored;
     let cwd = room.path.to_owned();
