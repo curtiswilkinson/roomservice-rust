@@ -164,8 +164,9 @@ fn main() {
     let dump_scope = matches.is_present("dump-scope");
 
     let rs = roomservice.exec(update_hashes_only, dry, dump_scope);
-
-    ThreadPool::new()
+    ThreadPool::builder()
+        .pool_size(4)
+        .create()
         .expect("Failed to create threadpool")
         .run(rs);
 

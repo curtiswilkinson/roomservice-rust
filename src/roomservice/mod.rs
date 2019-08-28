@@ -2,7 +2,8 @@ use colored::Colorize;
 
 use crate::roomservice::room::RoomBuilder;
 use crate::util::fail;
-use futures::future::join_all;
+use futures::stream::FuturesUnordered;
+use futures::future::{join, join_all};
 use std::path::Path;
 
 pub mod config;
@@ -79,9 +80,17 @@ impl RoomserviceBuilder {
 
         let force = self.force;
 
-        let should_build_futures = self.rooms.iter_mut().map(|room| room.should_build(force, dump_scope));
+        let mut should_build_futures = FuturesUnordered::new();
 
-        join_all(should_build_futures).await;
+
+// self.rooms.iter().for_each(|room| {
+        for room in self.rooms.iter(){
+    should_build_futures.push(room.should_build(force.clone(), dump_scope.clone()));
+        }
+// });
+
+
+            // futures::stream::iter( should_build_futures);
 
         if !update_hashes_only {
             let mut is_before = false;
@@ -141,15 +150,14 @@ impl RoomserviceBuilder {
 
             if is_before {
                 println!("{}", "\nExecuting Before".magenta().bold());
-                let hook_future: Vec<_> = self.rooms.iter_mut().map(|room| {
-                    println!("iter room");
+
+                let hook_future = self.rooms.iter_mut().map(|room| {
                     let hook = room.hooks.before.clone();
                     exec_room_cmd(room, hook)
-                }).collect();
-
-                println!("About to join_all");
+                });
 
                 join_all(hook_future).await;
+
             }
 
             if is_run_para {
@@ -213,6 +221,7 @@ impl RoomserviceBuilder {
 }
 
 async fn exec_room_cmd(room: &mut RoomBuilder, cmd: Option<String>) {
+    println!("Starting cmd ");
     let should_build = room.should_build.to_owned();
     let is_errored = room.errored;
     let cwd = room.path.to_owned();

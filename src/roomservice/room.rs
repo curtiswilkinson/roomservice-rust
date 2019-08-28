@@ -103,6 +103,7 @@ impl RoomBuilder {
     }
 
     pub async fn should_build(&mut self, force: bool, dump_scope: bool) {
+        println!("Should build starting");
         let prev = self.prev_hash().await;
         let curr = self.generate_hash(dump_scope).await;
         // println!("Current Hash is: {}, previous hash was: {:?}", curr, prev);
@@ -122,5 +123,7 @@ impl RoomBuilder {
         }
 
         self.latest_hash = Some(curr);
+
+        println!("Should build ending");
     }
 }
