@@ -3,7 +3,7 @@ cache: cargo
 
 DEPLOY_TO_GITHUB: &DEPLOY_TO_GITHUB
   before_deploy:
-    - name="roomservice-rust$TRAVIS_TAG-$TARGET"
+    - name="roomservice-rust-$TRAVIS_TAG-$TARGET"
     - mkdir $name
     - cp target/$TARGET/release/roomservice-rust $name/
     - cp LICENSE $name/
@@ -12,7 +12,7 @@ DEPLOY_TO_GITHUB: &DEPLOY_TO_GITHUB
     provider: releases
     api_key:
       secure: RZ73VGkvajT+2pGalBZUT5R806hmI0cNkFPYgEwQfU8FFqYCBnCRK0SZDILlyhGlPPzC/pgHVQvfLc1Krg2JCQaS2zzrn1Y9LYsyteH7RNrUmbocTqutOiCZRAegaKj04a6nbofFcWdLOybnMa8K1eHtTOE3lMNXaQcRjjUcXY/NOVdxUTAbcPnS0ZRnXuXSK5uAgcEj37v755brLJz392NepBo36yzIx23um5MCOVGum1MHfhwcJ9VIALHk9oAHfwJuSguIU+9TBAA0MDexGAt9NtlWsXJWRwnsX0i1Dvg4XhIYLK9mX0DPpjdlDoaKzAVwqteBQgoq/+3Ak0dQr3sB50QnUBnXEoJLP0/j3NFkQhaxap9fKC9PK3OR97j/ijzOV/Cu3bop7vQonIhHnfjN/mv1d/3JXPAYJNbIZLxNuYlOb8SEQ2oFCLqHtGPN6rxPdBfFg87NTc2FIFTorsbP3OI1epHWbWrDsoFeLRT/VubWn5mvHEakWNNDY5ttPT5EJsPfUc+1oDdB50smyMmqhb+WJS6y6Rv4NGCiAnvQzKxTfqOtFpJIBwTOpXZtWBHuxQsNwjLRt9/XeVukRI2PchMIHAHo+A5zHwnFhybpSSBtafm+NvOXRNP+6AjIcFiT+/CEDIC8CbhQka1HG7qypBeMX4HlvuZNEfBKj2U=
-    file: test
+    file: roomservice-rust-$TRAVIS_TAG-$TARGET.tar.gz
     on:
       repo: curtiswilkinson/roomservice-rust
 
