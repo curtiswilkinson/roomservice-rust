@@ -3,36 +3,37 @@ use ignore::Walk;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use util::fail;
+use util::Failable;
 
-#[derive(Debug)]
-pub struct RoomBuilder {
-    pub name: String,
-    pub path: String,
-    pub cache_dir: String,
-    pub include: String,
-    pub hooks: Hooks,
+#[derive(Debug, Clone, Copy)]
+pub struct RoomBuilder<'a> {
+    pub name: &'a str,
+    pub path: &'a str,
+    pub cache_dir: &'a str,
+    pub include: &'a str,
+    pub hooks: Hooks<'a>,
     pub should_build: bool,
-    pub latest_hash: Option<String>,
+    pub latest_hash: Option<&'a str>,
     pub errored: bool,
 }
 
-#[derive(Debug)]
-pub struct Hooks {
-    pub before: Option<String>,
-    pub run_synchronously: Option<String>,
-    pub run_parallel: Option<String>,
-    pub after: Option<String>,
-    pub finally: Option<String>,
+#[derive(Debug, Clone, Copy)]
+pub struct Hooks<'a> {
+    pub before: Option<&'a str>,
+    pub run_synchronously: Option<&'a str>,
+    pub run_parallel: Option<&'a str>,
+    pub after: Option<&'a str>,
+    pub finally: Option<&'a str>,
 }
 
-impl RoomBuilder {
-    pub fn new(
-        name: String,
-        path: String,
-        cache_dir: String,
-        include: String,
-        hooks: Hooks,
-    ) -> RoomBuilder {
+impl RoomBuilder<'_> {
+    pub fn new<'a>(
+        name: &'a str,
+        path: &'a str,
+        cache_dir: &'a str,
+        include: &'a str,
+        hooks: Hooks<'a>,
+    ) -> RoomBuilder<'a> {
         RoomBuilder {
             name,
             path,
@@ -51,24 +52,21 @@ impl RoomBuilder {
 
         for maybe_file in Walk::new(&self.path) {
             let file = maybe_file.unwrap();
-            match file.file_type() {
-                Some(entry) => {
-                    if entry.is_file() {
-                        if dump_scope {
-                            scope.push_str(file.path().to_str().unwrap());
-                            scope.push_str("\n")
-                        }
-
-                        hash.push_str(&hash_file(file.path(), BLAKE2));
-                        hash.push_str("\n");
+            if let Some(entry) = file.file_type() {
+                if entry.is_file() {
+                    if dump_scope {
+                        scope.push_str(file.path().to_str().unwrap());
+                        scope.push_str("\n")
                     }
+
+                    hash.push_str(&hash_file(file.path(), BLAKE2));
+                    hash.push_str("\n");
                 }
-                None => (),
             }
         }
 
         if dump_scope {
-            fs::write(&self.name, scope).expect("unable to dump file-scope");
+            fs::write(&self.name, scope).unwrap_fail("unable to dump file-scope");
         }
 
         hash
@@ -80,10 +78,7 @@ impl RoomBuilder {
         path.push_str("/");
         path.push_str(&self.name);
 
-        match fs::read_to_string(path) {
-            Ok(content) => Some(content),
-            Err(_) => None,
-        }
+        fs::read_to_string(path).ok()
     }
 
     pub fn set_errored(&mut self) {
@@ -96,9 +91,11 @@ impl RoomBuilder {
         path.push_str("/");
         path.push_str(&self.name);
         let mut file = File::create(path).unwrap();
-        match file.write_all(self.latest_hash.as_ref().unwrap().as_bytes()) {
-            Ok(_) => (),
-            Err(_) => fail("Unable to write roomservice cache for room {}"),
+        if file
+            .write_all(self.latest_hash.as_ref().unwrap().as_bytes())
+            .is_err()
+        {
+            fail("Unable to write roomservice cache for room {}")
         }
     }
 
@@ -121,6 +118,6 @@ impl RoomBuilder {
             }
         }
 
-        self.latest_hash = Some(curr);
+        self.latest_hash = Some(&curr);
     }
 }

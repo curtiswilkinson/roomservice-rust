@@ -8,17 +8,30 @@ use std::path::Path;
 use util::fail;
 
 #[derive(Debug)]
-pub struct RoomserviceBuilder {
+pub struct RoomserviceBuilder<'a> {
     pub before_all: Option<String>,
-    pub rooms: Vec<room::RoomBuilder>,
+    pub rooms: Vec<room::RoomBuilder<'a>>,
     pub after_all: Option<String>,
-    project: String,
-    cache_dir: String,
+    project: &'a str,
+    cache_dir: &'a str,
     force: bool,
 }
 
-impl RoomserviceBuilder {
-    pub fn new<'a>(project: String, cache_dir: String, force: bool) -> RoomserviceBuilder {
+impl Default for RoomserviceBuilder<'_> {
+    fn default() -> Self {
+        Self {
+            project: "./".into(),
+            force: false,
+            cache_dir: ".roomservice".into(),
+            rooms: Vec::new(),
+            before_all: None,
+            after_all: None,
+        }
+    }
+}
+
+impl RoomserviceBuilder<'_> {
+    pub fn new<'a>(project: &'a str, cache_dir: &'a str, force: bool) -> RoomserviceBuilder<'a> {
         match std::fs::create_dir(&cache_dir) {
             Ok(_) => (),
             Err(e) => match e.kind() {
@@ -29,11 +42,9 @@ impl RoomserviceBuilder {
 
         RoomserviceBuilder {
             project,
-            force,
             cache_dir,
-            rooms: Vec::new(),
-            before_all: None,
-            after_all: None,
+            force,
+            ..Default::default()
         }
     }
 
@@ -45,17 +56,11 @@ impl RoomserviceBuilder {
         self.after_all = Some(after_all.to_string())
     }
 
-    pub fn add_room(&mut self, mut room: room::RoomBuilder) {
+    pub fn add_room<'a>(&mut self, mut room: room::RoomBuilder<'a>) {
         let room_path = Path::new(&self.project).join(&room.path);
 
         if room_path.exists() {
-            room.path = room_path
-                .canonicalize()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string();
-
+            room.path = room_path.canonicalize().unwrap().to_str().unwrap();
             self.rooms.push(room);
         } else {
             fail(format!(
@@ -137,35 +142,29 @@ impl RoomserviceBuilder {
 
             if is_before {
                 println!("{}", "\nExecuting Before".magenta().bold());
-                self.rooms.par_iter_mut().for_each(|room| {
-                    let hook = room.hooks.before.clone();
-                    exec_room_cmd(room, hook);
-                });
+                self.rooms
+                    .par_iter_mut()
+                    .for_each(|room| exec_room_cmd(room, room.hooks.before));
             }
 
             if is_run_para {
                 println!("{}", "\nExecuting Run Parallel".magenta().bold());
-                self.rooms.par_iter_mut().for_each(|room| {
-                    let hook = room.hooks.run_parallel.clone();
-
-                    exec_room_cmd(room, hook);
-                });
+                self.rooms
+                    .par_iter_mut()
+                    .for_each(|room| exec_room_cmd(room, room.hooks.run_parallel));
             }
 
             if is_run_sync {
                 println!("{}", "\nExecuting Run Synchronously".magenta().bold());
-                self.rooms.iter_mut().for_each(|room| {
-                    let hook = room.hooks.run_synchronously.clone();
-
-                    exec_room_cmd(room, hook);
-                });
+                self.rooms
+                    .iter_mut()
+                    .for_each(|room| exec_room_cmd(room, room.hooks.run_synchronously));
             }
             if is_after {
                 println!("{}", "\nExecuting After".magenta().bold());
-                self.rooms.par_iter_mut().for_each(|room| {
-                    let hook = room.hooks.after.clone();
-                    exec_room_cmd(room, hook);
-                });
+                self.rooms
+                    .par_iter_mut()
+                    .for_each(|room| exec_room_cmd(room, room.hooks.after));
             }
 
             if self.after_all.is_some() {
@@ -197,7 +196,7 @@ impl RoomserviceBuilder {
     }
 }
 
-fn exec_room_cmd(room: &mut RoomBuilder, cmd: Option<String>) {
+fn exec_room_cmd(room: &mut RoomBuilder, cmd: Option<&str>) {
     let should_build = room.should_build.to_owned();
     let is_errored = room.errored;
     let cwd = room.path.to_owned();

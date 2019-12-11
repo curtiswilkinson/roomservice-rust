@@ -36,7 +36,7 @@ pub fn read(path_to_project: &str) -> Config {
         .unwrap_fail("Unable to open config");
 
     file.read_to_string(&mut config_contents)
-        .expect("Error reading the config file");
+        .unwrap_fail("Error reading the config file");
 
     serde_yaml::from_str(&config_contents).unwrap()
 }

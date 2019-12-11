@@ -79,7 +79,7 @@ fn main() {
 
     let cache_dir = path_buf.to_str().unwrap().to_owned().to_string();
 
-    let mut roomservice = RoomserviceBuilder::new(project_path.clone(), cache_dir.clone(), force);
+    let mut roomservice = RoomserviceBuilder::new(&project_path, &cache_dir, force);
 
     let cfg = config::read(&project_path);
 
@@ -118,12 +118,16 @@ fn main() {
 
         if should_add {
             roomservice.add_room(RoomBuilder::new(
-                name.to_string(),
-                room_config.path.to_string(),
-                cache_dir.clone(),
-                room_config.include,
+                &name,
+                &room_config.path,
+                &cache_dir,
+                &room_config.include,
                 Hooks {
-                    before: if after { None } else { room_config.before },
+                    before: if after {
+                        None
+                    } else {
+                        room_config.before.map(|s| Some(&s))
+                    },
                     run_synchronously: if after {
                         None
                     } else {
