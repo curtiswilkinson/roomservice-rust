@@ -231,7 +231,11 @@ fn exec_cmd(cwd: &str, cmd: &str, name: &str) -> Result<(), ()> {
             _ => {
                 println!("{} {} {}", "==>".bold(), "[Error]".red(), name);
 
-                println!("{}", capture_data.stderr_str());
+                println!(
+                    "{}\n{}",
+                    capture_data.stdout_str(),
+                    capture_data.stderr_str()
+                );
                 Err(())
             }
         },
