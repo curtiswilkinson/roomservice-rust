@@ -72,14 +72,19 @@ fn main() {
     }
 
     let project_path = find_config(project).unwrap_fail("No config found.");
-    let path_buf = std::path::Path::new(&project_path)
-        .canonicalize()
-        .unwrap()
-        .join(".roomservice");
+    let canonical_project_path = std::path::Path::new(&project_path).canonicalize().unwrap();
+
+    let project_root = canonical_project_path.parent().unwrap();
+
+    let path_buf = project_root.join(".roomservice");
 
     let cache_dir = path_buf.to_str().unwrap().to_owned().to_string();
 
-    let mut roomservice = RoomserviceBuilder::new(project_path.clone(), cache_dir.clone(), force);
+    let mut roomservice = RoomserviceBuilder::new(
+        project_root.to_str().unwrap().to_string(),
+        cache_dir.clone(),
+        force,
+    );
 
     let cfg = config::read(&project_path);
 
@@ -151,24 +156,28 @@ fn main() {
 }
 
 fn find_config(base_path: &str) -> Option<String> {
-    let path = Path::new(base_path);
-    let maybe_config_path = Path::new(&path).join("roomservice.config.yml");
-
-    if maybe_config_path.exists() {
-        return Some(path.to_str().unwrap().to_string());
+    if base_path.contains(".yml") {
+        Some(base_path.to_string())
     } else {
-        let parent = maybe_config_path.parent()?;
+        let path = Path::new(base_path);
+        let maybe_config_path = Path::new(&path).join("roomservice.config.yml");
 
-        if Path::new(parent).exists() {
-            let relative_path = if &base_path[..2] == "./" {
-                Path::new("../").join(&base_path[2..])
-            } else {
-                Path::new("../").join(base_path)
-            };
-
-            find_config(relative_path.to_str().unwrap())
+        if maybe_config_path.exists() {
+            return Some(maybe_config_path.to_str().unwrap().to_string());
         } else {
-            None
+            let parent = maybe_config_path.parent()?;
+
+            if Path::new(parent).exists() {
+                let relative_path = if &base_path[..2] == "./" {
+                    Path::new("../").join(&base_path[2..])
+                } else {
+                    Path::new("../").join(base_path)
+                };
+
+                find_config(relative_path.to_str().unwrap())
+            } else {
+                None
+            }
         }
     }
 }

@@ -32,8 +32,7 @@ fn default_include() -> String {
 
 pub fn read(path_to_project: &str) -> Config {
     let mut config_contents = String::new();
-    let mut file = File::open([path_to_project, "roomservice.config.yml"].join("/"))
-        .unwrap_fail("Unable to open config");
+    let mut file = File::open(path_to_project).unwrap_fail("Unable to open config");
 
     file.read_to_string(&mut config_contents)
         .expect("Error reading the config file");
