@@ -40,9 +40,6 @@ const platform = () => {
 const install = async () => {
   const target = platform()
   const url = `${repository.url}/releases/download/v${version}/${target}.tar.gz`
-  console.log(
-    `${repository.url}/releases/download/v${version}/${target}.tar.gz`
-  )
   const temp = os.tmpdir() + '/roomservice'
   const binary = new Binary(url, {
     installDirectory: temp,
