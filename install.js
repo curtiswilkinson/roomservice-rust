@@ -51,7 +51,7 @@ const install = async () => {
   // Sigh.
   await new Promise(res => setTimeout(res, 3000))
 
-  fs.renameSync(temp + '/bin//' + target+ '/roomservice', '/usr/local/bin/roomservice')
+  fs.renameSync(temp + '/bin/' + target+ '/roomservice', '/usr/local/bin/roomservice')
 }
 
 install()
