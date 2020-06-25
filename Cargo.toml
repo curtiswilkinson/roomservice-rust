@@ -1,5 +1,5 @@
 [package]
-name = "roomservice-rust"
+name = "roomservice"
 
 version = "0.1.0"
 authors = ["curtiswilkinson <curtistatewilkinson@gmail.com>"]

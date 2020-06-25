@@ -516,7 +516,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "roomservice-rust"
+name = "roomservice"
 version = "0.1.0"
 dependencies = [
  "checksums 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
