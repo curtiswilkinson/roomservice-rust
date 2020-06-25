@@ -1,6 +1,6 @@
 .cargo
 *travis*
-bin
+./bin
 .roomservice
 src
 target
