@@ -40,18 +40,17 @@ const platform = () => {
 const install = async () => {
   const target = platform()
   const url = `${repository.url}/releases/download/v${version}/${target}.tar.gz`
-  const temp = os.tmpdir() + '/roomservice'
   const binary = new Binary(url, {
-    installDirectory: temp,
+    installDirectory: './',
     name: 'roomservice'
   })
   
   await binary.install()
 
-  // Sigh.
-  await new Promise(res => setTimeout(res, 3000))
+  await new Promise(res => setTimeout(res, 3000)) 
 
-  fs.renameSync(temp + '/bin/' + target+ '/roomservice', '/usr/local/bin/roomservice')
+  fs.renameSync('./bin/' + target + '/roomservice', './bin/roomservice')
+
 }
 
 install()

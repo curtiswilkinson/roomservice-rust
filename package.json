@@ -16,6 +16,9 @@
   "bugs": {
     "url": "https://github.com/curtiswilkinson/roomservice-rust/issues"
   },
+  "bin": {
+    "roomservice": "./bin/roomservice"
+  },
   "homepage": "https://github.com/curtiswilkinson/roomservice-rust#readme",
   "dependencies": {
     "binary-install": "0.0.1"
