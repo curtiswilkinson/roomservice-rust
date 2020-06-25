@@ -1,3 +1,7 @@
+.cargo
+*travis*
+bin
+.roomservice
 src
 target
 roomservice.config.yml
