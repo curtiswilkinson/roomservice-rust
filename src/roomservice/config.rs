@@ -17,6 +17,8 @@ pub struct RoomConfig {
     pub path: String,
     #[serde(default = "default_include")]
     pub include: String,
+    #[serde(rename = "beforeSynchronous")]
+    pub before_synchronous: Option<String>,
     pub before: Option<String>,
     #[serde(rename = "runSynchronous")]
     pub run_synchronous: Option<String>,

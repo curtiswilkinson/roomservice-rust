@@ -79,6 +79,7 @@ impl RoomserviceBuilder {
 
         if !update_hashes_only {
             let mut is_before = false;
+            let mut is_before_sync = false;
             let mut is_run_para = false;
             let mut is_run_sync = false;
             let mut is_after = false;
@@ -89,6 +90,10 @@ impl RoomserviceBuilder {
                 .filter_map(|room| {
                     if room.hooks.before.is_some() {
                         is_before = true;
+                    }
+
+                    if room.hooks.before_synchronously.is_some() {
+                        is_before_sync = true;
                     }
 
                     if room.hooks.run_parallel.is_some() {
@@ -133,6 +138,14 @@ impl RoomserviceBuilder {
                     Ok(_) => (),
                     Err(_) => fail("Error in Before All hook, aborting roomservice run"),
                 }
+            }
+
+            if is_before_sync {
+                println!("{}", "\nExecuting Before Sync".magenta().bold());
+                self.rooms.iter_mut().for_each(|room| {
+                    let hook = room.hooks.before_synchronously.clone();
+                    exec_room_cmd(room, hook);
+                });
             }
 
             if is_before {

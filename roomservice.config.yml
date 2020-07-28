@@ -2,9 +2,11 @@ beforeAll: echo beforeAll
 rooms:
   room_one:
     path: ./src/
-    before: doker service update --force unity_x
+    beforeSynchronous: sleep 4
+    before: sleep 2
     after: echo "hi"
   room_two:
     path: ./src/
+    beforeSynchronous: sleep 5
     before: echo hi
 afterAll: echo afterAll

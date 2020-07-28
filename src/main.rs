@@ -129,6 +129,11 @@ fn main() {
                 room_config.include,
                 Hooks {
                     before: if after { None } else { room_config.before },
+                    before_synchronously: if after {
+                        None
+                    } else {
+                        room_config.before_synchronous
+                    },
                     run_synchronously: if after {
                         None
                     } else {
