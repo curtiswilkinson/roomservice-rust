@@ -1,8 +1,6 @@
-use checksums::{hash_file, Algorithm::BLAKE2};
-use ignore::Walk;
+use crate::util::fail;
 use std::fs::{self, File};
 use std::io::prelude::*;
-use util::fail;
 
 #[derive(Debug)]
 pub struct RoomBuilder {
@@ -45,8 +43,11 @@ impl RoomBuilder {
         }
     }
 
-    fn generate_hash(&self, dump_scope: bool) -> String {
-        let mut hash = String::with_capacity(256);
+    pub fn generate_hash(&self, dump_scope: bool) -> String {
+        use ignore::Walk;
+        use meowhash::MeowHasher;
+        use std::io::BufReader;
+        let mut content = String::with_capacity(10 * 1024);
         let mut scope = String::new();
 
         for maybe_file in Walk::new(&self.path) {
@@ -59,8 +60,9 @@ impl RoomBuilder {
                             scope.push_str("\n")
                         }
 
-                        hash.push_str(&hash_file(file.path(), BLAKE2));
-                        hash.push_str("\n");
+                        let file = File::open(file.path()).unwrap();
+                        let mut reader = BufReader::new(file);
+                        reader.read_to_string(&mut content);
                     }
                 }
                 None => (),
@@ -71,7 +73,7 @@ impl RoomBuilder {
             fs::write(&self.name, scope).expect("unable to dump file-scope");
         }
 
-        hash
+        MeowHasher::hash(&content.as_bytes()).as_u128().to_string()
     }
 
     fn prev_hash(&self) -> Option<String> {

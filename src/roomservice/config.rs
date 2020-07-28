@@ -1,7 +1,7 @@
+use crate::util::Failable;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Read;
-use util::Failable;
 
 #[derive(Debug, PartialEq, Deserialize)]
 pub struct Config {

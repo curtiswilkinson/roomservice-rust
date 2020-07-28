@@ -1,14 +1,14 @@
+#![feature(test)]
 #[macro_use]
 extern crate serde_derive;
-extern crate checksums;
 extern crate clap;
 extern crate colored;
-extern crate glob;
-extern crate globwalk;
 extern crate ignore;
+extern crate meowhash;
 extern crate rayon;
 extern crate serde_yaml;
 extern crate subprocess;
+extern crate test;
 
 use clap::{App, Arg};
 
@@ -55,7 +55,7 @@ fn main() {
         .arg(Arg::with_name("no-after").long("no-after"))
         .get_matches();
 
-    let project = matches.value_of("project").unwrap_or("./");
+    let project = matches.value_of("project");
     let no_after = matches.is_present("no-after");
     let force = matches.is_present("force");
     let after = matches.is_present("after");
@@ -71,22 +71,28 @@ fn main() {
         fail("Both --after & --no-after options provided.")
     }
 
-    let project_path = find_config(project).unwrap_fail("No config found.");
-    let canonical_project_path = std::path::Path::new(&project_path).canonicalize().unwrap();
+    let project_path = find_project(project).unwrap_fail("No config found.");
 
-    let project_root = canonical_project_path.parent().unwrap();
-
-    let path_buf = project_root.join(".roomservice");
+    let path_buf = project_path.join(".roomservice");
 
     let cache_dir = path_buf.to_str().unwrap().to_owned().to_string();
 
     let mut roomservice = RoomserviceBuilder::new(
-        project_root.to_str().unwrap().to_string(),
+        project_path.to_str().unwrap().to_string(),
         cache_dir.clone(),
         force,
     );
 
-    let cfg = config::read(&project_path);
+    let cfg = if Path::new(project.unwrap()).is_file() {
+        config::read(&project.unwrap())
+    } else {
+        config::read(
+            project_path
+                .join("roomservice.config.yml")
+                .to_str()
+                .unwrap(),
+        )
+    };
 
     if cfg.before_all.is_some() {
         roomservice.add_before_all(&cfg.before_all.unwrap())
@@ -155,29 +161,41 @@ fn main() {
     println!("\nTime taken: {}s", start_time.elapsed().as_secs())
 }
 
-fn find_config(base_path: &str) -> Option<String> {
-    if base_path.contains(".yml") {
-        Some(base_path.to_string())
-    } else {
-        let path = Path::new(base_path);
-        let maybe_config_path = Path::new(&path).join("roomservice.config.yml");
-
-        if maybe_config_path.exists() {
-            return Some(maybe_config_path.to_str().unwrap().to_string());
-        } else {
-            let parent = maybe_config_path.parent()?;
-
-            if Path::new(parent).exists() {
-                let relative_path = if &base_path[..2] == "./" {
-                    Path::new("../").join(&base_path[2..])
-                } else {
-                    Path::new("../").join(base_path)
-                };
-
-                find_config(relative_path.to_str().unwrap())
+fn find_project(maybe_base_or_file: Option<&str>) -> Option<&Path> {
+    match maybe_base_or_file {
+        Some(base_or_file_str) => {
+            let base_or_file = Path::new(base_or_file_str);
+            if base_or_file.is_file() {
+                base_or_file.parent()
+            } else if base_or_file.is_dir() {
+                Some(base_or_file)
             } else {
                 None
             }
+        }
+        None => find_config("./"),
+    }
+}
+
+fn find_config(base_path: &str) -> Option<&Path> {
+    let path = Path::new(base_path);
+    let maybe_config_path = Path::new(&path).join("roomservice.config.yml");
+
+    if maybe_config_path.exists() {
+        return Some(&maybe_config_path);
+    } else {
+        let parent = maybe_config_path.parent()?;
+
+        if Path::new(parent).exists() {
+            let relative_path = if &base_path[..2] == "./" {
+                Path::new("../").join(&base_path[2..])
+            } else {
+                Path::new("../").join(base_path)
+            };
+
+            find_config(relative_path.to_str().unwrap())
+        } else {
+            None
         }
     }
 }
@@ -208,5 +226,30 @@ fn split_matches<'a>(val: Option<clap::Values<'a>>) -> Vec<&'a str> {
         }
 
         None => vec![],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use test::Bencher;
+
+    use crate::roomservice::room::{Hooks, RoomBuilder};
+    #[bench]
+    fn hash_dir(b: &mut Bencher) {
+        let room = RoomBuilder::new(
+            "Test".into(),
+            "../unity/services/core-portal/apps".into(),
+            "".into(),
+            "".into(),
+            Hooks {
+                before: None,
+                run_synchronously: None,
+                run_parallel: None,
+                after: None,
+                finally: None,
+            },
+        );
+
+        b.iter(|| room.generate_hash(false))
     }
 }
