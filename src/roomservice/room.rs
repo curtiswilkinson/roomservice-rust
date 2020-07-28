@@ -19,6 +19,7 @@ pub struct RoomBuilder {
 #[derive(Debug)]
 pub struct Hooks {
     pub before: Option<String>,
+    pub before_synchronously: Option<String>,
     pub run_synchronously: Option<String>,
     pub run_parallel: Option<String>,
     pub after: Option<String>,
