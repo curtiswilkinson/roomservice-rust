@@ -8,7 +8,7 @@ Please note the second command maybe require sudo in order to move the binary in
 ### Linux
 
 ```sh
-curl -L https://github.com/curtiswilkinson/roomservice-rust/releases/download/v4.0.0/x86_64-unknown-linux-musl.tar.gz | tar xz
+curl -L https://github.com/curtiswilkinson/roomservice-rust/releases/download/v4.0.1/x86_64-unknown-linux-musl.tar.gz | tar xz
  
 cp target/x86_64-unknown-linux-musl/roomservice /usr/local/bin && rm -rf target roomservice.tar.gz
 ```
@@ -16,7 +16,7 @@ cp target/x86_64-unknown-linux-musl/roomservice /usr/local/bin && rm -rf target 
 ### OSX
 
 ```sh
-curl -L https://github.com/curtiswilkinson/roomservice-rust/releases/download/v4.0.0/x86_64-apple-darwin.tar.gz | tar xz
+curl -L https://github.com/curtiswilkinson/roomservice-rust/releases/download/v4.0.1/x86_64-apple-darwin.tar.gz | tar xz
  
 cp target/x86_64-apple-darwin/roomservice /usr/local/bin && rm -rf target roomservice.tar.gz
 
