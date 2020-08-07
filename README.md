@@ -10,7 +10,7 @@ Please note the second command maybe require sudo in order to move the binary in
 ```sh
 curl -L https://github.com/curtiswilkinson/roomservice-rust/releases/download/v4.0.1/x86_64-unknown-linux-musl.tar.gz | tar xz
  
-cp target/x86_64-unknown-linux-musl/roomservice /usr/local/bin && rm -rf target roomservice.tar.gz
+cp target/x86_64-unknown-linux-musl/release/roomservice /usr/local/bin && rm -rf target roomservice.tar.gz
 ```
 
 ### OSX
