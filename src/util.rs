@@ -33,3 +33,40 @@ impl<T, E> Failable<T> for Result<T, E> {
         }
     }
 }
+
+#[macro_export]
+macro_rules! para_hook {
+    ($x: ident, $y: ident) => {
+        if $y.iter().any(|(_, room)| room.$x.is_some()) {
+            println!(
+                "{}",
+                format!("\nExecuting {}", stringify!($x)).magenta().bold()
+            );
+        }
+
+        $y.par_iter().for_each(|(name, room)| {
+            if let Some(hook) = &room.$x {
+                exec::exec_cmd(&room.path, &hook, name).unwrap();
+            }
+        });
+    };
+}
+
+#[macro_export]
+macro_rules! sync_hook {
+    ($x: ident, $y: ident) => {
+        let mut ran = false;
+        for (name, room) in &$y {
+            if let Some(hook) = &room.$x {
+                if !ran {
+                    println!(
+                        "{}",
+                        format!("\nExecuting {}", stringify!($x)).magenta().bold()
+                    );
+                    ran = true;
+                }
+                exec::exec_cmd(&room.path, &hook, name).unwrap();
+            }
+        }
+    };
+}
