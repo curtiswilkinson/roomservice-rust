@@ -13,11 +13,20 @@ curl -L https://github.com/curtiswilkinson/roomservice-rust/releases/download/v4
 cp target/x86_64-unknown-linux-musl/release/roomservice /usr/local/bin && rm -rf target roomservice.tar.gz
 ```
 
-### OSX
+### OSX (x86)
 
 ```sh
 curl -L https://github.com/curtiswilkinson/roomservice-rust/releases/download/v4.0.1/x86_64-apple-darwin.tar.gz | tar xz
  
 cp target/x86_64-apple-darwin/roomservice /usr/local/bin && rm -rf target roomservice.tar.gz
+
+```
+
+### OSX (ARM)
+
+```sh
+curl -L https://github.com/curtiswilkinson/roomservice-rust/releases/download/v4.0.1/aarch64-apple-darwin.tar.gz | tar xz
+ 
+cp target/aarch64-apple-darwin/roomservice /usr/local/bin && rm -rf target roomservice.tar.gz
 
 ```
